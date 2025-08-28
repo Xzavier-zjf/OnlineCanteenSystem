@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间显示和订单处理功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button, select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        input, select {
+            width: 200px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            border: none;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            border-left: 4px solid #28a745;
+            background-color: #d4edda;
+        }
+        .error {
+            border-left: 4px solid #dc3545;
+            background-color: #f8d7da;
+        }
+        .time-test {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .time-item {
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>时间显示和订单处理功能测试</h1>
+        
+        <!-- 时间格式化测试 -->
+        <div class="section">
+            <h2>1. 时间格式化测试</h2>
+            <p>测试不同时间格式的处理：</p>
+            <div id="timeTests"></div>
+            <button onclick="testTimeFormatting()">测试时间格式化</button>
+        </div>
+        
+        <!-- 用户登录测试 -->
+        <div class="section">
+            <h2>2. 用户登录测试</h2>
+            <div class="form-group">
+                <label for="username">用户名:</label>
+                <input type="text" id="username" value="testuser">
+            </div>
+            <div class="form-group">
+                <label for="password">密码:</label>
+                <input type="password" id="password" value="123456">
+            </div>
+            <button onclick="login()">登录</button>
+            <button onclick="getUserInfo()">获取用户信息</button>
+        </div>
+        
+        <!-- 订单操作测试 -->
+        <div class="section">
+            <h2>3. 订单操作测试</h2>
+            <div class="form-group">
+                <label for="orderId">订单ID:</label>
+                <input type="number" id="orderId" value="1">
+            </div>
+            <div class="form-group">
+                <label for="orderStatus">订单状态:</label>
+                <select id="orderStatus">
+                    <option value="PENDING">待支付</option>
+                    <option value="PAID">已支付</option>
+                    <option value="PREPARING">制作中</option>
+                    <option value="READY">待取餐</option>
+                    <option value="COMPLETED">已完成</option>
+                    <option value="CANCELLED">已取消</option>
+                </select>
+            </div>
+            <button onclick="getOrders()">获取订单列表</button>
+            <button onclick="updateOrderStatus()">更新订单状态</button>
+            <button onclick="payOrder()">支付订单</button>
+            <button onclick="cancelOrder()">取消订单</button>
+        </div>
+        
+        <div id="result" class="result" style="display:none;"></div>
+        
+        <button onclick="clearResults()">清空结果</button>
+    </div>
+
+    <script>
+        let token = '';
+        let userId = null;
+        
+        // 时间格式化函数（与前端一致）
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                let date;
+                if (typeof dateStr === 'string') {
+                    date = new Date(dateStr);
+                } else if (Array.isArray(dateStr) && dateStr.length >= 3) {
+                    const [year, month, day, hour = 0, minute = 0, second = 0] = dateStr;
+                    date = new Date(year, month - 1, day, hour, minute, second);
+                } else {
+                    date = new Date(dateStr);
+                }
+                
+                if (isNaN(date.getTime())) {
+                    console.warn('日期格式无效:', dateStr);
+                    return '日期格式错误';
+                }
+                
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+            } catch (error) {
+                console.error('日期格式化错误:', error);
+                return '日期解析失败';
+            }
+        }
+        
+        function testTimeFormatting() {
+            const testCases = [
+                '2024-12-25T10:30:00',
+                '2024-12-25 10:30:00',
+                [2024, 12, 25, 10, 30, 0],
+                [2024, 12, 25],
+                new Date().toISOString(),
+                null,
+                '',
+                'invalid-date',
+                Date.now()
+            ];
+            
+            const resultsDiv = document.getElementById('timeTests');
+            resultsDiv.innerHTML = '';
+            
+            testCases.forEach((testCase, index) => {
+                const result = formatDate(testCase);
+                const div = document.createElement('div');
+                div.className = 'time-item';
+                div.innerHTML = `
+                    <strong>测试 ${index + 1}:</strong><br>
+                    输入: ${JSON.stringify(testCase)}<br>
+                    输出: ${result}
+                `;
+                resultsDiv.appendChild(div);
+            });
+        }
+        
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('http://localhost:8081/api/users/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                console.log('登录响应:', data);
+                
+                if (data.code === 200) {
+                    token = data.data.token;
+                    userId = data.data.userId;
+                    showResult('登录成功!\\nToken: ' + token + '\\nUserID: ' + userId, 'success');
+                } else {
+                    showResult('登录失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showResult('登录请求失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function getUserInfo() {
+            if (!token) {
+                showResult('请先登录获取Token', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8081/api/users/info', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('用户信息响应:', data);
+                
+                if (data.code === 200) {
+                    const userInfo = data.data;
+                    const createTime = formatDate(userInfo.createTime);
+                    const updateTime = formatDate(userInfo.updateTime);
+                    
+                    showResult(`获取用户信息成功!
+用户名: ${userInfo.username}
+真实姓名: ${userInfo.realName || '未设置'}
+注册时间: ${createTime}
+更新时间: ${updateTime}
+完整数据: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('获取用户信息失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showResult('获取用户信息请求失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function getOrders() {
+            if (!token || !userId) {
+                showResult('请先登录获取Token和用户ID', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8083/api/orders/user/${userId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('订单列表响应:', data);
+                
+                if (data.code === 200) {
+                    const orders = data.data || [];
+                    let orderText = `获取订单列表成功! 共 ${orders.length} 个订单:\\n\\n`;
+                    
+                    orders.forEach((order, index) => {
+                        const createTime = formatDate(order.createTime);
+                        const updateTime = formatDate(order.updateTime);
+                        orderText += `订单 ${index + 1}:
+  ID: ${order.id}
+  订单号: ${order.orderNo}
+  状态: ${order.status}
+  金额: ¥${order.totalAmount}
+  创建时间: ${createTime}
+  更新时间: ${updateTime}
+  备注: ${order.remark || '无'}
+
+`;
+                    });
+                    
+                    showResult(orderText, 'success');
+                } else {
+                    showResult('获取订单列表失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showResult('获取订单列表请求失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function updateOrderStatus() {
+            const orderId = document.getElementById('orderId').value;
+            const status = document.getElementById('orderStatus').value;
+            
+            if (!token) {
+                showResult('请先登录获取Token', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8083/api/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status })
+                });
+                
+                const data = await response.json();
+                console.log('更新订单状态响应:', data);
+                
+                if (data.code === 200) {
+                    showResult(`订单状态更新成功!\\n订单ID: ${orderId}\\n新状态: ${status}`, 'success');
+                } else {
+                    showResult('更新订单状态失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showResult('更新订单状态请求失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function payOrder() {
+            const orderId = document.getElementById('orderId').value;
+            
+            if (!token) {
+                showResult('请先登录获取Token', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8083/api/orders/${orderId}/pay`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('支付订单响应:', data);
+                
+                if (data.code === 200) {
+                    showResult(`订单支付成功!\\n订单ID: ${orderId}`, 'success');
+                } else {
+                    showResult('订单支付失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showResult('订单支付请求失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function cancelOrder() {
+            const orderId = document.getElementById('orderId').value;
+            
+            if (!token) {
+                showResult('请先登录获取Token', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8083/api/orders/${orderId}/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('取消订单响应:', data);
+                
+                if (data.code === 200) {
+                    showResult(`订单取消成功!\\n订单ID: ${orderId}`, 'success');
+                } else {
+                    showResult('订单取消失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showResult('订单取消请求失败: ' + error.message, 'error');
+            }
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+        
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+            resultDiv.textContent = '';
+            resultDiv.className = 'result';
+            
+            const timeTests = document.getElementById('timeTests');
+            timeTests.innerHTML = '';
+        }
+        
+        // 页面加载时自动测试时间格式化
+        window.onload = function() {
+            testTimeFormatting();
+        };
+    </script>
+</body>
+</html>

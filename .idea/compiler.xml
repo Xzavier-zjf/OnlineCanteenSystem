@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="canteen-user-service" />
+        <module name="canteen-order-service" />
+        <module name="canteen-product-service" />
+        <module name="canteen-recommend-service" />
+        <module name="canteen-gateway" />
+        <module name="canteen-common" />
+        <module name="canteen-merchant-client" />
+      </profile>
+    </annotationProcessing>
+  </component>
+</project>

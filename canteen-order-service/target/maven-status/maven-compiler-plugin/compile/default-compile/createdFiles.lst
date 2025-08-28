@@ -1,0 +1,17 @@
+com\canteen\order\mapper\OrderItemMapper.class
+com\canteen\order\mapper\OrderMapper.class
+com\canteen\order\OrderServiceApplication.class
+com\canteen\order\config\MyBatisConfig$1.class
+com\canteen\order\controller\OrderController$CreateOrderRequest.class
+com\canteen\order\controller\OrderController$UpdateStatusRequest.class
+com\canteen\order\controller\OrderController$UserOrderStats.class
+com\canteen\order\controller\OrderController.class
+com\canteen\order\config\DataInitConfig.class
+com\canteen\order\entity\OrderItem.class
+com\canteen\order\config\MyBatisConfig.class
+com\canteen\order\entity\Order$Status.class
+com\canteen\order\service\OrderService.class
+com\canteen\order\config\CorsConfig.class
+com\canteen\order\controller\OrderController$OrderItemRequest.class
+com\canteen\order\dto\OrderDetailResponse.class
+com\canteen\order\entity\Order.class

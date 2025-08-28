@@ -1,0 +1,11 @@
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\service\impl\UserServiceImpl.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\UserServiceApplication.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\entity\User.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\dto\UserDTO.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\controller\UserController.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\service\UserService.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\dto\UserStatsDTO.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\config\CorsConfig.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\config\DataInitConfig.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\config\ApplicationRunnerConfig.java
+D:\IdeaProjects\OnlineCanteenSystem\canteen-user-service\src\main\java\com\canteen\user\mapper\UserMapper.java

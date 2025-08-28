@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API测试</title>
+</head>
+<body>
+    <h1>食堂系统API测试</h1>
+    
+    <div>
+        <h2>用户登录测试</h2>
+        <button onclick="testLogin()">测试登录</button>
+        <div id="loginResult"></div>
+    </div>
+    
+    <div>
+        <h2>获取用户信息测试</h2>
+        <button onclick="testGetProfile()">测试获取用户信息</button>
+        <div id="profileResult"></div>
+    </div>
+    
+    <script>
+        async function testLogin() {
+            try {
+                const response = await fetch('http://localhost:8081/api/users/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'test',
+                        password: '123456'
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('loginResult').innerHTML = 
+                    '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                
+                if (result.data && result.data.token) {
+                    localStorage.setItem('token', result.data.token);
+                    localStorage.setItem('userInfo', JSON.stringify(result.data.user));
+                }
+            } catch (error) {
+                document.getElementById('loginResult').innerHTML = 
+                    '<p style="color: red;">错误: ' + error.message + '</p>';
+            }
+        }
+        
+        async function testGetProfile() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('http://localhost:8081/api/users/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                document.getElementById('profileResult').innerHTML = 
+                    '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('profileResult').innerHTML = 
+                    '<p style="color: red;">错误: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

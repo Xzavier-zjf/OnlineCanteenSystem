@@ -1,0 +1,5 @@
+com\canteen\recommend\config\WebClientConfig.class
+com\canteen\recommend\RecommendServiceApplication.class
+com\canteen\recommend\service\RecommendService.class
+com\canteen\recommend\controller\RecommendController.class
+com\canteen\recommend\config\CorsConfig.class

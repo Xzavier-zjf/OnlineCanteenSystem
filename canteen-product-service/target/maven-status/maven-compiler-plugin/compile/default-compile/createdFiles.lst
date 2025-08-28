@@ -1,0 +1,14 @@
+com\canteen\product\controller\ProductController.class
+com\canteen\product\service\ProductService.class
+com\canteen\product\service\ProductCategoryService.class
+com\canteen\product\ProductServiceApplication.class
+com\canteen\product\config\DataInitConfig.class
+com\canteen\product\config\MyBatisConfig.class
+com\canteen\product\entity\Product.class
+com\canteen\product\controller\HealthController.class
+com\canteen\product\mapper\ProductCategoryMapper.class
+com\canteen\product\config\MyBatisConfig$1.class
+com\canteen\product\mapper\ProductMapper.class
+com\canteen\product\config\ApplicationRunnerConfig.class
+com\canteen\product\config\CorsConfig.class
+com\canteen\product\entity\ProductCategory.class

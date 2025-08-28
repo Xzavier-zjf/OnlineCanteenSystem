@@ -1,0 +1,42 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: canteen-product-service
+  
+  # 允许bean定义覆盖
+  main:
+    allow-bean-definition-overriding: true
+  
+  # 数据库配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/canteen_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+
+  # 禁用数据库初始化
+  sql:
+    init:
+      mode: never
+  
+  # 禁用JPA相关配置
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
+# 日志配置
+logging:
+  level:
+    com.canteen.product: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

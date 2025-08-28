@@ -1,0 +1,12 @@
+{
+  "name": "onlinecanteensystem",
+  "version": "1.0.0",
+  "description": "## 项目概述 本项目是一个基于Spring Boot微服务架构的高校食堂订餐系统，包含用户管理、餐品管理、订单管理等核心功能。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
