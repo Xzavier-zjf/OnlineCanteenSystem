@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 餐品控制器
@@ -92,6 +93,19 @@ public class ProductController {
     @GetMapping("/health")
     public Result<String> health() {
         return Result.success("餐品服务运行正常");
+    }
+
+    /**
+     * 获取系统统计数据
+     */
+    @GetMapping("/stats")
+    public Result<Map<String, Object>> getSystemStats() {
+        try {
+            Map<String, Object> stats = productService.getSystemStats();
+            return Result.success(stats);
+        } catch (Exception e) {
+            return Result.error("获取统计数据失败: " + e.getMessage());
+        }
     }
 
     /**

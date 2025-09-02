@@ -137,6 +137,11 @@ export const productApi = {
   // 获取商品详情
   getProductDetail: (id) => {
     return productRequest.get(`/api/products/${id}`)
+  },
+  
+  // 获取系统统计数据
+  getSystemStats: () => {
+    return productRequest.get('/api/products/stats')
   }
 }
 
@@ -149,7 +154,11 @@ export const orderApi = {
   
   // 获取订单列表
   getOrders: (userId) => {
-    return orderRequest.get(`/api/orders/user/${userId}`)
+    if (userId) {
+      return orderRequest.get(`/api/orders/user/${userId}`)
+    } else {
+      return orderRequest.get('/api/orders')
+    }
   },
   
   // 获取订单详情
@@ -203,5 +212,13 @@ export const recommendApi = {
   // 记录用户行为
   recordBehavior: (data) => {
     return recommendRequest.post('/api/recommend/behavior', data)
+  }
+}
+
+// 系统统计API
+export const systemApi = {
+  // 获取系统统计数据
+  getSystemStats: () => {
+    return userRequest.get('/api/system/stats')
   }
 }

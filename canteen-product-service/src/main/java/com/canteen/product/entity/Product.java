@@ -32,6 +32,10 @@ public class Product {
 
     private Integer status;
 
+    private Integer isHot; // 是否热门商品
+
+    private Double rating; // 商品评分
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
