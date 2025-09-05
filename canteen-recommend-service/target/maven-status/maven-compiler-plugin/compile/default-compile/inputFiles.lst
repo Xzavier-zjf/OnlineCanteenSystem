@@ -1,5 +1,8 @@
 D:\IdeaProjects\online-canteen-system\canteen-recommend-service\src\main\java\com\canteen\recommend\entity\UserBehavior.java
 D:\IdeaProjects\online-canteen-system\canteen-recommend-service\src\main\java\com\canteen\recommend\RecommendServiceApplication.java
+D:\IdeaProjects\online-canteen-system\canteen-recommend-service\src\main\java\com\canteen\recommend\controller\AdminRecommendController.java
+D:\IdeaProjects\online-canteen-system\canteen-recommend-service\src\main\java\com\canteen\recommend\service\AdminRecommendService.java
+D:\IdeaProjects\online-canteen-system\canteen-recommend-service\src\main\java\com\canteen\recommend\service\impl\AdminRecommendServiceImpl.java
 D:\IdeaProjects\online-canteen-system\canteen-recommend-service\src\main\java\com\canteen\recommend\controller\RecommendControllerNew.java
 D:\IdeaProjects\online-canteen-system\canteen-recommend-service\src\main\java\com\canteen\recommend\service\RecommendService.java
 D:\IdeaProjects\online-canteen-system\canteen-recommend-service\src\main\java\com\canteen\recommend\config\CorsConfig.java

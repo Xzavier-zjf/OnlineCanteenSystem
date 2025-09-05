@@ -1,5 +1,6 @@
-D:\IdeaProjects\OnlineCanteenSystem\canteen-common\src\main\java\com\canteen\common\result\PageResult.java
-D:\IdeaProjects\OnlineCanteenSystem\canteen-common\src\main\java\com\canteen\common\exception\BusinessException.java
-D:\IdeaProjects\OnlineCanteenSystem\canteen-common\src\main\java\com\canteen\common\result\Result.java
-D:\IdeaProjects\OnlineCanteenSystem\canteen-common\src\main\java\com\canteen\common\exception\GlobalExceptionHandler.java
-D:\IdeaProjects\OnlineCanteenSystem\canteen-common\src\main\java\com\canteen\common\utils\JwtUtils.java
+D:\IdeaProjects\online-canteen-system\canteen-common\src\main\java\com\canteen\common\result\Result.java
+D:\IdeaProjects\online-canteen-system\canteen-common\src\main\java\com\canteen\common\utils\JwtUtils.java
+D:\IdeaProjects\online-canteen-system\canteen-common\src\main\java\com\canteen\common\exception\BusinessException.java
+D:\IdeaProjects\online-canteen-system\canteen-common\src\main\java\com\canteen\common\controller\SystemStatsController.java
+D:\IdeaProjects\online-canteen-system\canteen-common\src\main\java\com\canteen\common\exception\GlobalExceptionHandler.java
+D:\IdeaProjects\online-canteen-system\canteen-common\src\main\java\com\canteen\common\result\PageResult.java

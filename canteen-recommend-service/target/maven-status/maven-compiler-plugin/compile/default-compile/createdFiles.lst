@@ -1,8 +1,11 @@
+com\canteen\recommend\service\AdminRecommendService.class
 com\canteen\recommend\RecommendServiceApplication.class
 com\canteen\recommend\controller\RecommendControllerNew.class
 com\canteen\recommend\entity\RecommendProduct.class
+com\canteen\recommend\service\impl\AdminRecommendServiceImpl.class
 com\canteen\recommend\config\WebClientConfig.class
 com\canteen\recommend\entity\UserBehavior.class
 com\canteen\recommend\service\RecommendService.class
+com\canteen\recommend\controller\AdminRecommendController.class
 com\canteen\recommend\config\CorsConfig.class
 com\canteen\recommend\service\impl\RecommendServiceImpl.class

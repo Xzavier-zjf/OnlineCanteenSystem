@@ -61,23 +61,39 @@
               placeholder="价格区间" 
               clearable 
               @change="handleSearch"
-              style="width: 120px; margin-right: 10px;"
+              style="width: 140px; margin-right: 10px;"
             >
-              <el-option label="0-10元" value="0-10" />
-              <el-option label="10-20元" value="10-20" />
-              <el-option label="20-50元" value="20-50" />
+              <el-option label="0-5元" value="0-5" />
+              <el-option label="5-10元" value="5-10" />
+              <el-option label="10-15元" value="10-15" />
+              <el-option label="15-20元" value="15-20" />
+              <el-option label="20-30元" value="20-30" />
+              <el-option label="30-50元" value="30-50" />
               <el-option label="50元以上" value="50+" />
             </el-select>
             <el-select 
               v-model="sortBy" 
               placeholder="排序方式" 
               @change="handleSearch"
-              style="width: 120px; margin-right: 10px;"
+              style="width: 140px; margin-right: 10px;"
             >
               <el-option label="默认排序" value="default" />
               <el-option label="价格升序" value="price_asc" />
               <el-option label="价格降序" value="price_desc" />
               <el-option label="销量优先" value="sales_desc" />
+              <el-option label="评分优先" value="rating_desc" />
+              <el-option label="最新上架" value="create_time_desc" />
+            </el-select>
+            <el-select 
+              v-model="stockFilter" 
+              placeholder="库存状态" 
+              clearable 
+              @change="handleSearch"
+              style="width: 120px; margin-right: 10px;"
+            >
+              <el-option label="有库存" value="in_stock" />
+              <el-option label="库存不足" value="low_stock" />
+              <el-option label="缺货" value="out_of_stock" />
             </el-select>
             <el-button type="primary" @click="handleSearch">
               <el-icon><Search /></el-icon>
@@ -110,22 +126,51 @@
             <el-card class="product-card" shadow="hover">
               <div class="product-image-container">
                 <img :src="getImageUrl(product.imageUrl)" @error="handleImageError" class="product-image" />
-                <div class="product-badge" v-if="product.sales > 100">
-                  <el-tag type="success" size="small">热销</el-tag>
+                <div class="product-badges">
+                  <el-tag v-if="product.sales > 100" type="success" size="small">热销</el-tag>
+                  <el-tag v-if="product.rating >= 4.5" type="warning" size="small">高评分</el-tag>
+                  <el-tag v-if="product.isNew" type="primary" size="small">新品</el-tag>
+                </div>
+                <div class="stock-status" v-if="product.stock !== undefined">
+                  <el-tag 
+                    :type="getStockStatusType(product.stock)" 
+                    size="small"
+                    class="stock-tag"
+                  >
+                    {{ getStockStatusText(product.stock) }}
+                  </el-tag>
                 </div>
               </div>
               <div class="product-info">
                 <h3>{{ product.name }}</h3>
                 <p class="product-desc">{{ product.description }}</p>
                 <div class="product-stats">
-                  <span class="product-sales">已售 {{ product.sales || 0 }}</span>
-                  <el-rate v-model="product.rating" disabled show-score size="small" />
+                  <div class="stats-row">
+                    <span class="product-sales">已售 {{ product.sales || 0 }}</span>
+                    <span class="product-stock" v-if="product.stock !== undefined">
+                      库存: {{ product.stock }}
+                    </span>
+                  </div>
+                  <div class="rating-row">
+                    <el-rate v-model="product.rating" disabled show-score size="small" />
+                  </div>
                 </div>
                 <div class="product-footer">
-                  <span class="product-price">¥{{ product.price }}</span>
-                  <el-button type="primary" size="small" @click="addToCart(product)">
+                  <div class="price-info">
+                    <span class="product-price">¥{{ product.price }}</span>
+                    <span v-if="product.originalPrice && product.originalPrice > product.price" 
+                          class="original-price">
+                      ¥{{ product.originalPrice }}
+                    </span>
+                  </div>
+                  <el-button 
+                    type="primary" 
+                    size="small" 
+                    @click="addToCart(product)"
+                    :disabled="product.stock === 0"
+                  >
                     <el-icon><Plus /></el-icon>
-                    加入购物车
+                    {{ product.stock === 0 ? '缺货' : '加入购物车' }}
                   </el-button>
                 </div>
               </div>
@@ -225,6 +270,7 @@ export default {
     const keyword = ref('')
     const priceRange = ref('')
     const sortBy = ref('default')
+    const stockFilter = ref('')
     const activeCategory = ref('all')
     const currentPage = ref(1)
     const pageSize = ref(6)
@@ -298,6 +344,9 @@ export default {
         if (sortBy.value && sortBy.value !== 'default') {
           params.sortBy = sortBy.value
         }
+        if (stockFilter.value) {
+          params.stockFilter = stockFilter.value
+        }
         
         const response = await productApi.getProducts(params)
         products.value = response.data.records
@@ -317,27 +366,82 @@ export default {
         if (userInfo.id) {
           try {
             response = await recommendApi.getRecommendProducts(userInfo.id, 3)
-            recommendProducts.value = response.data || []
-            console.log('个性化推荐加载成功:', response.data)
-            return
+            if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
+              // 为推荐商品添加推荐理由
+              recommendProducts.value = response.data.map(product => ({
+                ...product,
+                reason: product.reason || getRecommendReason(product)
+              }))
+              console.log('个性化推荐加载成功:', recommendProducts.value)
+              return
+            }
           } catch (personalizedError) {
             console.warn('个性化推荐失败，尝试热门推荐:', personalizedError)
           }
         }
         
-        // 如果个性化推荐失败，使用热门推荐
+        // 如果个性化推荐失败或无数据，使用热门推荐
         try {
           response = await recommendApi.getHotRecommendations(3)
-          recommendProducts.value = response.data || []
-          console.log('热门推荐加载成功:', response.data)
+          if (response && response.data && Array.isArray(response.data)) {
+            recommendProducts.value = response.data.map(product => ({
+              ...product,
+              reason: product.reason || '热门商品，好评如潮'
+            }))
+            console.log('热门推荐加载成功:', recommendProducts.value)
+          } else {
+            // 如果热门推荐也没有数据，尝试获取高评分商品作为推荐
+            const productsResponse = await productApi.getProducts({ 
+              current: 1, 
+              size: 3, 
+              sortBy: 'rating_desc' 
+            })
+            if (productsResponse && productsResponse.data && productsResponse.data.records) {
+              recommendProducts.value = productsResponse.data.records.slice(0, 3).map(product => ({
+                ...product,
+                reason: '高评分商品，品质保证'
+              }))
+              console.log('使用高评分商品作为推荐:', recommendProducts.value)
+            } else {
+              recommendProducts.value = []
+            }
+          }
         } catch (hotError) {
-          console.error('热门推荐也失败了:', hotError)
-          recommendProducts.value = []
+          console.error('热门推荐失败，尝试获取普通商品:', hotError)
+          // 最后的备选方案：获取任意商品作为推荐
+          try {
+            const fallbackResponse = await productApi.getProducts({ current: 1, size: 3 })
+            if (fallbackResponse && fallbackResponse.data && fallbackResponse.data.records) {
+              recommendProducts.value = fallbackResponse.data.records.slice(0, 3).map(product => ({
+                ...product,
+                reason: '精选商品，值得尝试'
+              }))
+              console.log('使用普通商品作为推荐:', recommendProducts.value)
+            } else {
+              recommendProducts.value = []
+            }
+          } catch (fallbackError) {
+            console.error('所有推荐方案都失败了:', fallbackError)
+            recommendProducts.value = []
+          }
         }
         
       } catch (error) {
         console.error('加载推荐商品完全失败:', error)
         recommendProducts.value = []
+      }
+    }
+    
+    // 生成推荐理由的辅助函数
+    const getRecommendReason = (product) => {
+      if (product.sales > 100) {
+        return '热销商品，深受喜爱'
+      } else if (product.rating >= 4.5) {
+        return '高评分商品，品质优秀'
+      } else if (product.isHot) {
+        return '热门推荐，不容错过'
+      } else {
+        return '为您精选，值得品尝'
       }
     }
     
@@ -364,6 +468,7 @@ export default {
         keyword: keyword.value,
         priceRange: priceRange.value,
         sortBy: sortBy.value,
+        stockFilter: stockFilter.value,
         activeCategory: activeCategory.value
       })
       loadProducts()
@@ -565,6 +670,18 @@ export default {
     const handleImageError = (event) => {
       event.target.src = '/images/products/placeholder.svg'
     }
+    
+    const getStockStatusType = (stock) => {
+      if (stock === 0) return 'danger'
+      if (stock <= 10) return 'warning'
+      return 'success'
+    }
+    
+    const getStockStatusText = (stock) => {
+      if (stock === 0) return '缺货'
+      if (stock <= 10) return '库存不足'
+      return '有库存'
+    }
 
     onMounted(() => {
       loadCategories()
@@ -580,6 +697,7 @@ export default {
       keyword,
       priceRange,
       sortBy,
+      stockFilter,
       activeCategory,
       currentPage,
       pageSize,
@@ -600,7 +718,9 @@ export default {
       checkout,
       creatingOrder,
       getImageUrl,
-      handleImageError
+      handleImageError,
+      getStockStatusType,
+      getStockStatusText
     }
   }
 }
@@ -825,6 +945,80 @@ export default {
   text-align: center;
   font-weight: bold;
   color: #303133;
+}
+
+/* 商品卡片增强样式 */
+.product-badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 2;
+}
+
+.stock-status {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+}
+
+.stock-tag {
+  font-size: 12px;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.product-stock {
+  color: #909399;
+  font-size: 0.85em;
+}
+
+.rating-row {
+  display: flex;
+  justify-content: center;
+}
+
+.price-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.original-price {
+  color: #909399;
+  font-size: 0.8em;
+  text-decoration: line-through;
+  margin-top: 2px;
+}
+
+/* 搜索筛选区域样式 */
+.search-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .search-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-filters .el-input,
+  .search-filters .el-select {
+    width: 100% !important;
+    margin-right: 0 !important;
+    margin-bottom: 8px;
+  }
 }
 
 .cart-item-price {

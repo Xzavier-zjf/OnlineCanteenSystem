@@ -24,7 +24,7 @@ public class MerchantClientApp {
         // 启动主窗口
         SwingUtilities.invokeLater(() -> {
             try {
-                new MainFrame().setVisible(true);
+                new com.canteen.merchant.ui.LoginFrame().setVisible(true);
                 System.out.println("=================================");
                 System.out.println("商户端桌面应用启动成功！");
                 System.out.println("=================================");

@@ -24,6 +24,8 @@ public class Product {
 
     private Long categoryId;
 
+    private Long merchantId;
+
     private String imageUrl;
 
     private Integer stock;

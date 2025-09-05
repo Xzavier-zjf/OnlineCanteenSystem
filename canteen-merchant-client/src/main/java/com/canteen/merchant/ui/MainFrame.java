@@ -1,278 +1,181 @@
 package com.canteen.merchant.ui;
 
-import com.canteen.merchant.service.ApiService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.canteen.merchant.dto.MerchantUser;
+import com.canteen.merchant.ui.panel.*;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.List;
-import java.util.Map;
 
 /**
- * 商户端主窗口
+ * 商户主界面
  */
+@Slf4j
 public class MainFrame extends JFrame {
+
+    private final MerchantUser currentUser;
+    private JTabbedPane tabbedPane;
     
-    private final ApiService apiService;
-    private final ObjectMapper objectMapper;
-    private JTable productTable;
-    private DefaultTableModel tableModel;
-    private JTextField nameField, priceField, stockField, descField;
-    private JComboBox<String> categoryComboBox;
-    
-    public MainFrame() {
-        this.apiService = new ApiService();
-        this.objectMapper = new ObjectMapper();
-        
+    // 各功能面板
+    private DashboardPanel dashboardPanel;
+    private ProductManagementPanel productPanel;
+    private OrderManagementPanel orderPanel;
+    private FinancePanel financePanel;
+    private ProfilePanel profilePanel;
+
+    public MainFrame(MerchantUser user) {
+        this.currentUser = user;
         initComponents();
-        loadProducts();
-        loadCategories();
+        setupLayout();
+        setupEventHandlers();
     }
-    
+
     private void initComponents() {
-        setTitle("高校食堂订餐系统 - 商户端管理");
+        setTitle("食堂管理系统 - 商户管理端 [" + currentUser.getUsername() + "]");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1000, 700);
+        setSize(1200, 800);
         setLocationRelativeTo(null);
-        
-        // 创建主面板
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        
-        // 顶部面板
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        topPanel.setBorder(BorderFactory.createTitledBorder("系统信息"));
-        topPanel.add(new JLabel("欢迎使用商户端管理系统"));
-        
-        JButton refreshButton = new JButton("刷新数据");
-        refreshButton.addActionListener(e -> {
-            loadProducts();
-            loadCategories();
-        });
-        topPanel.add(refreshButton);
-        
-        // 中间面板 - 餐品列表
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(BorderFactory.createTitledBorder("餐品管理"));
-        
-        // 表格
-        String[] columnNames = {"ID", "名称", "价格", "分类", "库存", "销量", "状态"};
-        tableModel = new DefaultTableModel(columnNames, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // 设置表格不可编辑
-            }
-        };
-        productTable = new JTable(tableModel);
-        productTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        
-        JScrollPane scrollPane = new JScrollPane(productTable);
-        centerPanel.add(scrollPane, BorderLayout.CENTER);
-        
-        // 底部面板 - 餐品操作
-        JPanel bottomPanel = createProductFormPanel();
-        
-        // 组装主面板
-        mainPanel.add(topPanel, BorderLayout.NORTH);
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
-        
-        add(mainPanel);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // 创建选项卡面板
+        tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+
+        // 创建各功能面板
+        dashboardPanel = new DashboardPanel(currentUser);
+        productPanel = new ProductManagementPanel(currentUser);
+        orderPanel = new OrderManagementPanel(currentUser);
+        financePanel = new FinancePanel(currentUser);
+        profilePanel = new ProfilePanel(currentUser);
     }
-    
-    private JPanel createProductFormPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("餐品信息"));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        
-        // 餐品名称
-        gbc.gridx = 0; gbc.gridy = 0;
-        panel.add(new JLabel("餐品名称:"), gbc);
-        gbc.gridx = 1;
-        nameField = new JTextField(15);
-        panel.add(nameField, gbc);
-        
-        // 价格
-        gbc.gridx = 2; gbc.gridy = 0;
-        panel.add(new JLabel("价格:"), gbc);
-        gbc.gridx = 3;
-        priceField = new JTextField(10);
-        panel.add(priceField, gbc);
-        
-        // 分类
-        gbc.gridx = 0; gbc.gridy = 1;
-        panel.add(new JLabel("分类:"), gbc);
-        gbc.gridx = 1;
-        categoryComboBox = new JComboBox<>();
-        panel.add(categoryComboBox, gbc);
-        
-        // 库存
-        gbc.gridx = 2; gbc.gridy = 1;
-        panel.add(new JLabel("库存:"), gbc);
-        gbc.gridx = 3;
-        stockField = new JTextField(10);
-        panel.add(stockField, gbc);
-        
-        // 描述
-        gbc.gridx = 0; gbc.gridy = 2;
-        panel.add(new JLabel("描述:"), gbc);
-        gbc.gridx = 1; gbc.gridwidth = 3;
-        descField = new JTextField(30);
-        panel.add(descField, gbc);
-        
-        // 按钮面板
-        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 4;
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        
-        JButton addButton = new JButton("添加餐品");
-        addButton.addActionListener(new AddProductAction());
-        buttonPanel.add(addButton);
-        
-        JButton updateButton = new JButton("更新餐品");
-        updateButton.addActionListener(new UpdateProductAction());
-        buttonPanel.add(updateButton);
-        
-        JButton deleteButton = new JButton("删除餐品");
-        deleteButton.addActionListener(new DeleteProductAction());
-        buttonPanel.add(deleteButton);
-        
-        JButton clearButton = new JButton("清空表单");
-        clearButton.addActionListener(e -> clearForm());
-        buttonPanel.add(clearButton);
-        
-        panel.add(buttonPanel, gbc);
-        
-        // 表格选择监听器
-        productTable.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                fillFormFromSelection();
-            }
-        });
-        
-        return panel;
+
+    private void setupLayout() {
+        setLayout(new BorderLayout());
+
+        // 顶部工具栏
+        JToolBar toolBar = createToolBar();
+        add(toolBar, BorderLayout.NORTH);
+
+        // 添加选项卡
+        tabbedPane.addTab("首页概览", new ImageIcon(), dashboardPanel, "查看今日营业概况");
+        tabbedPane.addTab("菜品管理", new ImageIcon(), productPanel, "管理菜品信息");
+        tabbedPane.addTab("订单管理", new ImageIcon(), orderPanel, "处理订单");
+        tabbedPane.addTab("财务统计", new ImageIcon(), financePanel, "查看收入统计");
+        tabbedPane.addTab("商户信息", new ImageIcon(), profilePanel, "管理商户资料");
+
+        add(tabbedPane, BorderLayout.CENTER);
+
+        // 底部状态栏
+        JPanel statusBar = createStatusBar();
+        add(statusBar, BorderLayout.SOUTH);
     }
-    
-    private void loadProducts() {
+
+    private JToolBar createToolBar() {
+        JToolBar toolBar = new JToolBar();
+        toolBar.setFloatable(false);
+
+        // 刷新按钮
+        JButton refreshButton = new JButton("刷新");
+        refreshButton.setIcon(new ImageIcon()); // 可以添加图标
+        refreshButton.addActionListener(e -> refreshCurrentPanel());
+        toolBar.add(refreshButton);
+
+        toolBar.addSeparator();
+
+        // 设置按钮
+        JButton settingsButton = new JButton("设置");
+        settingsButton.addActionListener(e -> showSettings());
+        toolBar.add(settingsButton);
+
+        toolBar.addSeparator();
+
+        // 退出按钮
+        JButton logoutButton = new JButton("退出登录");
+        logoutButton.addActionListener(e -> logout());
+        toolBar.add(logoutButton);
+
+        return toolBar;
+    }
+
+    private JPanel createStatusBar() {
+        JPanel statusBar = new JPanel(new BorderLayout());
+        statusBar.setBorder(BorderFactory.createLoweredBevelBorder());
+
+        JLabel statusLabel = new JLabel("就绪");
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+        statusBar.add(statusLabel, BorderLayout.WEST);
+
+        JLabel timeLabel = new JLabel();
+        timeLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+        statusBar.add(timeLabel, BorderLayout.EAST);
+
+        // 定时更新时间
+        Timer timer = new Timer(1000, e -> {
+            timeLabel.setText(java.time.LocalDateTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        });
+        timer.start();
+
+        return statusBar;
+    }
+
+    private void setupEventHandlers() {
+        // 选项卡切换事件
+        tabbedPane.addChangeListener(e -> {
+            int selectedIndex = tabbedPane.getSelectedIndex();
+            refreshPanelByIndex(selectedIndex);
+        });
+    }
+
+    private void refreshCurrentPanel() {
+        int selectedIndex = tabbedPane.getSelectedIndex();
+        refreshPanelByIndex(selectedIndex);
+    }
+
+    private void refreshPanelByIndex(int index) {
         try {
-            String response = apiService.get("/api/product/list?current=1&size=100");
-            JsonNode responseNode = objectMapper.readTree(response);
-            
-            if (responseNode.get("code").asInt() == 200) {
-                JsonNode data = responseNode.get("data");
-                JsonNode records = data.get("records");
-                
-                // 清空现有数据
-                tableModel.setRowCount(0);
-                
-                // 添加新数据
-                for (JsonNode product : records) {
-                    Object[] row = {
-                        product.get("id").asLong(),
-                        product.get("name").asText(),
-                        product.get("price").asDouble(),
-                        product.get("categoryId").asLong(),
-                        product.get("stock").asInt(),
-                        product.get("sales").asInt(),
-                        product.get("status").asInt() == 1 ? "上架" : "下架"
-                    };
-                    tableModel.addRow(row);
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, 
-                    "获取餐品列表失败: " + responseNode.get("message").asText(),
-                    "错误", JOptionPane.ERROR_MESSAGE);
+            switch (index) {
+                case 0:
+                    dashboardPanel.refresh();
+                    break;
+                case 1:
+                    productPanel.refresh();
+                    break;
+                case 2:
+                    orderPanel.refresh();
+                    break;
+                case 3:
+                    financePanel.refresh();
+                    break;
+                case 4:
+                    profilePanel.refresh();
+                    break;
             }
         } catch (Exception e) {
+            log.error("刷新面板失败", e);
             JOptionPane.showMessageDialog(this, 
-                "获取餐品列表失败: " + e.getMessage(),
-                "错误", JOptionPane.ERROR_MESSAGE);
+                "刷新失败：" + e.getMessage(), 
+                "错误", 
+                JOptionPane.ERROR_MESSAGE);
         }
     }
-    
-    private void loadCategories() {
-        try {
-            String response = apiService.get("/api/product/categories");
-            JsonNode responseNode = objectMapper.readTree(response);
-            
-            if (responseNode.get("code").asInt() == 200) {
-                categoryComboBox.removeAllItems();
-                categoryComboBox.addItem("请选择分类");
-                
-                JsonNode categories = responseNode.get("data");
-                for (JsonNode category : categories) {
-                    String item = category.get("id").asLong() + " - " + category.get("name").asText();
-                    categoryComboBox.addItem(item);
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("加载分类失败: " + e.getMessage());
-        }
+
+    private void showSettings() {
+        // 显示设置对话框
+        JOptionPane.showMessageDialog(this, "设置功能开发中...", "提示", JOptionPane.INFORMATION_MESSAGE);
     }
-    
-    private void fillFormFromSelection() {
-        int selectedRow = productTable.getSelectedRow();
-        if (selectedRow >= 0) {
-            nameField.setText(tableModel.getValueAt(selectedRow, 1).toString());
-            priceField.setText(tableModel.getValueAt(selectedRow, 2).toString());
-            stockField.setText(tableModel.getValueAt(selectedRow, 4).toString());
-            // 这里可以添加更多字段的填充
-        }
-    }
-    
-    private void clearForm() {
-        nameField.setText("");
-        priceField.setText("");
-        stockField.setText("");
-        descField.setText("");
-        categoryComboBox.setSelectedIndex(0);
-        productTable.clearSelection();
-    }
-    
-    // 添加餐品动作
-    private class AddProductAction implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            // 简化实现：显示提示信息
-            JOptionPane.showMessageDialog(MainFrame.this, 
-                "添加餐品功能需要连接后端API实现",
-                "提示", JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
-    
-    // 更新餐品动作
-    private class UpdateProductAction implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            JOptionPane.showMessageDialog(MainFrame.this, 
-                "更新餐品功能需要连接后端API实现",
-                "提示", JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
-    
-    // 删除餐品动作
-    private class DeleteProductAction implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            int selectedRow = productTable.getSelectedRow();
-            if (selectedRow >= 0) {
-                int result = JOptionPane.showConfirmDialog(MainFrame.this,
-                    "确定要删除选中的餐品吗？",
-                    "确认删除", JOptionPane.YES_NO_OPTION);
-                    
-                if (result == JOptionPane.YES_OPTION) {
-                    JOptionPane.showMessageDialog(MainFrame.this, 
-                        "删除餐品功能需要连接后端API实现",
-                        "提示", JOptionPane.INFORMATION_MESSAGE);
-                }
-            } else {
-                JOptionPane.showMessageDialog(MainFrame.this, 
-                    "请先选择要删除的餐品",
-                    "提示", JOptionPane.WARNING_MESSAGE);
-            }
+
+    private void logout() {
+        int result = JOptionPane.showConfirmDialog(this, 
+            "确定要退出登录吗？", 
+            "确认", 
+            JOptionPane.YES_NO_OPTION);
+        
+        if (result == JOptionPane.YES_OPTION) {
+            dispose();
+            new LoginFrame().setVisible(true);
         }
     }
 }

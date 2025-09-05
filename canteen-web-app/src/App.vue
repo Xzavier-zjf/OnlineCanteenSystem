@@ -18,11 +18,68 @@
               text-color="#333"
               active-text-color="#409EFF"
             >
-              <el-menu-item index="/">首页</el-menu-item>
-              <el-menu-item index="/products">餐品浏览</el-menu-item>
-              <el-menu-item index="/orders" v-if="isLoggedIn">我的订单</el-menu-item>
-              <el-menu-item index="/status">服务状态</el-menu-item>
-              <el-menu-item index="/test">系统测试</el-menu-item>
+              <!-- 普通用户菜单 -->
+              <template v-if="!isLoggedIn || userRole === 'USER'">
+                <el-menu-item index="/">首页</el-menu-item>
+                <el-menu-item index="/products">餐品浏览</el-menu-item>
+                <el-menu-item index="/orders" v-if="isLoggedIn">我的订单</el-menu-item>
+                <el-menu-item index="/status">服务状态</el-menu-item>
+              </template>
+              
+              <!-- 管理员菜单 -->
+              <template v-else-if="userRole === 'ADMIN'">
+                <el-menu-item index="/admin/dashboard">
+                  <el-icon><DataAnalysis /></el-icon>
+                  管理仪表盘
+                </el-menu-item>
+                <el-menu-item index="/admin/users">
+                  <el-icon><User /></el-icon>
+                  用户管理
+                </el-menu-item>
+                <el-menu-item index="/admin/products">
+                  <el-icon><Goods /></el-icon>
+                  商品管理
+                </el-menu-item>
+                <el-menu-item index="/admin/orders">
+                  <el-icon><List /></el-icon>
+                  订单管理
+                </el-menu-item>
+                <el-menu-item index="/admin/merchants">
+                  <el-icon><Shop /></el-icon>
+                  商户管理
+                </el-menu-item>
+                <el-menu-item index="/admin/system">
+                  <el-icon><Setting /></el-icon>
+                  系统设置
+                </el-menu-item>
+              </template>
+              
+              <!-- 商户菜单 -->
+              <template v-else-if="userRole === 'MERCHANT'">
+                <el-menu-item index="/merchant/dashboard">
+                  <el-icon><DataBoard /></el-icon>
+                  商户仪表盘
+                </el-menu-item>
+                <el-menu-item index="/merchant/products">
+                  <el-icon><Goods /></el-icon>
+                  我的商品
+                </el-menu-item>
+                <el-menu-item index="/merchant/orders">
+                  <el-icon><List /></el-icon>
+                  订单管理
+                </el-menu-item>
+                <el-menu-item index="/merchant/financial">
+                  <el-icon><Money /></el-icon>
+                  财务统计
+                </el-menu-item>
+                <el-menu-item index="/merchant/settings">
+                  <el-icon><Setting /></el-icon>
+                  店铺设置
+                </el-menu-item>
+              </template>
+              
+              <!-- 通用菜单项 -->
+              <el-menu-item index="/test" v-if="isDevelopment">系统测试</el-menu-item>
             </el-menu>
           </div>
           
@@ -40,8 +97,43 @@
                 </span>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item command="profile">个人信息</el-dropdown-item>
-                    <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+                    <el-dropdown-item command="profile">
+                      <el-icon><User /></el-icon>
+                      个人信息
+                    </el-dropdown-item>
+                    
+                    <!-- 角色标识 -->
+                    <el-dropdown-item disabled>
+                      <el-tag :type="getRoleTagType(userRole)" size="small">
+                        {{ getRoleText(userRole) }}
+                      </el-tag>
+                    </el-dropdown-item>
+                    
+                    <!-- 角色相关快捷菜单 -->
+                    <template v-if="userRole === 'ADMIN'">
+                      <el-dropdown-item command="admin-dashboard" divided>
+                        <el-icon><DataAnalysis /></el-icon>
+                        管理后台
+                      </el-dropdown-item>
+                    </template>
+                    
+                    <template v-if="userRole === 'MERCHANT'">
+                      <el-dropdown-item command="merchant-dashboard" divided>
+                        <el-icon><DataBoard /></el-icon>
+                        商户后台
+                      </el-dropdown-item>
+                    </template>
+                    
+                    <!-- 通用菜单 -->
+                    <el-dropdown-item command="settings">
+                      <el-icon><Setting /></el-icon>
+                      系统设置
+                    </el-dropdown-item>
+                    
+                    <el-dropdown-item command="logout" divided>
+                      <el-icon><SwitchButton /></el-icon>
+                      退出登录
+                    </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -52,7 +144,8 @@
       
       <!-- 主要内容区域 -->
       <el-main class="main-content">
-        <router-view />
+        <router-view v-if="!$route.path.startsWith('/admin')" />
+        <router-view v-else />
       </el-main>
       
       <!-- 底部 -->
@@ -69,15 +162,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Shop, User, ArrowDown, Food } from '@element-plus/icons-vue'
+import { 
+  Shop, User, ArrowDown, Food, DataAnalysis, Goods, List, 
+  Setting, DataBoard, Money, SwitchButton 
+} from '@element-plus/icons-vue'
 
 export default {
   name: 'App',
   components: {
-    Shop,
-    User,
-    ArrowDown,
-    Food
+    Shop, User, ArrowDown, Food, DataAnalysis, Goods, 
+    List, Setting, DataBoard, Money, SwitchButton
   },
   setup() {
     const router = useRouter()
@@ -90,6 +184,14 @@ export default {
     const isLoggedIn = computed(() => {
       // 使用响应式变量而不是直接读取localStorage
       return loginStatus.value
+    })
+    
+    const userRole = computed(() => {
+      return userInfo.value?.role || 'USER'
+    })
+    
+    const isDevelopment = computed(() => {
+      return process.env.NODE_ENV === 'development'
     })
     
     const checkLoginStatus = () => {
@@ -117,12 +219,44 @@ export default {
     }
     
     const handleCommand = (command) => {
-      if (command === 'logout') {
-        logout()
-      } else if (command === 'profile') {
-        // 跳转到个人信息页面
-        router.push('/profile')
+      switch (command) {
+        case 'logout':
+          logout()
+          break
+        case 'profile':
+          router.push('/profile')
+          break
+        case 'admin-dashboard':
+          router.push('/admin/dashboard')
+          break
+        case 'merchant-dashboard':
+          router.push('/merchant/dashboard')
+          break
+        case 'settings':
+          router.push('/settings')
+          break
+        default:
+          console.log('未知命令:', command)
       }
+    }
+    
+    // 角色相关辅助函数
+    const getRoleText = (role) => {
+      const roleMap = {
+        'USER': '普通用户',
+        'MERCHANT': '商户',
+        'ADMIN': '管理员'
+      }
+      return roleMap[role] || '未知角色'
+    }
+    
+    const getRoleTagType = (role) => {
+      const typeMap = {
+        'USER': 'info',
+        'MERCHANT': 'warning', 
+        'ADMIN': 'danger'
+      }
+      return typeMap[role] || 'info'
     }
     
     const logout = () => {
@@ -175,9 +309,13 @@ export default {
     return {
       isLoggedIn,
       userInfo,
+      userRole,
+      isDevelopment,
       activeIndex,
       handleSelect,
-      handleCommand
+      handleCommand,
+      getRoleText,
+      getRoleTagType
     }
   }
 }

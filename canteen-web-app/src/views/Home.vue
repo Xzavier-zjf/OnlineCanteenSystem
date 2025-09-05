@@ -129,27 +129,45 @@ export default {
             })
         )
         
-        // 获取订单总数（通过获取所有订单来统计）
+        // 获取系统统计数据（包含用户数、订单数等）
         promises.push(
-          orderApi.getOrders()
+          productApi.getSystemStats()
             .then(response => {
-              if (response && response.data && Array.isArray(response.data)) {
-                systemStats.value.totalOrders = response.data.length
+              if (response && response.data) {
+                const stats = response.data
+                systemStats.value.totalUsers = stats.totalUsers || 0
+                systemStats.value.totalOrders = stats.totalOrders || 0
+                systemStats.value.satisfaction = stats.satisfaction || '0%'
               }
             })
             .catch(() => {
-              systemStats.value.totalOrders = 0
+              // 如果系统统计API不可用，尝试其他方式获取数据
+              return orderApi.getOrders()
+                .then(response => {
+                  if (response && response.data && Array.isArray(response.data)) {
+                    systemStats.value.totalOrders = response.data.length
+                    // 基于订单数估算用户数和满意度
+                    systemStats.value.totalUsers = Math.max(10, Math.floor(systemStats.value.totalOrders * 0.6))
+                    systemStats.value.satisfaction = systemStats.value.totalOrders > 0 ? '95%' : '0%'
+                  }
+                })
+                .catch(() => {
+                  systemStats.value.totalUsers = 0
+                  systemStats.value.totalOrders = 0
+                  systemStats.value.satisfaction = '0%'
+                })
             })
         )
         
         await Promise.all(promises)
         
-        // 设置一些默认值
-        systemStats.value.totalUsers = Math.max(50, Math.floor(systemStats.value.totalOrders * 0.3))
-        systemStats.value.satisfaction = systemStats.value.totalOrders > 0 ? '95%' : '0%'
-        
       } catch (error) {
         console.error('加载系统统计数据失败:', error)
+        // 设置默认值
+        systemStats.value.totalProducts = 0
+        systemStats.value.totalUsers = 0
+        systemStats.value.totalOrders = 0
+        systemStats.value.satisfaction = '0%'
       } finally {
         statsLoading.value = false
       }

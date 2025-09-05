@@ -8,6 +8,7 @@ import OrderDetail from '../views/OrderDetail.vue'
 import Profile from '../views/Profile.vue'
 import Test from '../views/Test.vue'
 import ServiceStatus from '../views/ServiceStatus.vue'
+import adminRoutes from './admin'
 
 const routes = [
   {
@@ -57,6 +58,45 @@ const routes = [
     path: '/status',
     name: 'ServiceStatus',
     component: ServiceStatus
+  },
+  // 商户路由
+  {
+    path: '/merchant/dashboard',
+    name: 'MerchantDashboard',
+    component: () => import('../views/merchant/Dashboard.vue'),
+    meta: { requiresAuth: true, role: 'MERCHANT' }
+  },
+  {
+    path: '/merchant/products',
+    name: 'MerchantProducts',
+    component: () => import('../views/merchant/Products.vue'),
+    meta: { requiresAuth: true, role: 'MERCHANT' }
+  },
+  {
+    path: '/merchant/orders',
+    name: 'MerchantOrders',
+    component: () => import('../views/merchant/Orders.vue'),
+    meta: { requiresAuth: true, role: 'MERCHANT' }
+  },
+  {
+    path: '/merchant/financial',
+    name: 'MerchantFinancial',
+    component: () => import('../views/merchant/Financial.vue'),
+    meta: { requiresAuth: true, role: 'MERCHANT' }
+  },
+  {
+    path: '/merchant/settings',
+    name: 'MerchantSettings',
+    component: () => import('../views/merchant/Settings.vue'),
+    meta: { requiresAuth: true, role: 'MERCHANT' }
+  },
+  // 管理员路由
+  ...adminRoutes,
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/Settings.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -68,12 +108,21 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
   
+  // 检查是否需要认证
   if (to.meta.requiresAuth && !token) {
     next('/login')
-  } else {
-    next()
+    return
   }
+  
+  // 检查角色权限
+  if (to.meta.role && userInfo.role !== to.meta.role) {
+    next('/')
+    return
+  }
+  
+  next()
 })
 
 export default router

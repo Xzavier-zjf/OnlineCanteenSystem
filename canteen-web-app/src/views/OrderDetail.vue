@@ -214,8 +214,8 @@ export default {
     }
     
     const getOrderSteps = (currentStatus) => {
-      const now = new Date()
-      const createTime = new Date(orderDetail.value?.createTime)
+      const order = orderDetail.value
+      if (!order) return []
       
       const allSteps = [
         { 
@@ -223,7 +223,7 @@ export default {
           status: 'PENDING', 
           type: 'primary', 
           icon: 'Clock',
-          time: formatTime(orderDetail.value?.createTime),
+          time: formatTime(order.createTime),
           description: '订单已提交，等待支付'
         },
         { 
@@ -231,7 +231,7 @@ export default {
           status: 'PAID', 
           type: 'success', 
           icon: 'Check',
-          time: currentStatus !== 'PENDING' ? getEstimatedTime(createTime, 2) : '',
+          time: order.paidTime ? formatTime(order.paidTime) : '',
           description: '支付成功，商家开始准备'
         },
         { 
@@ -239,7 +239,7 @@ export default {
           status: 'PREPARING', 
           type: 'primary', 
           icon: 'Clock',
-          time: ['PREPARING', 'READY', 'COMPLETED'].includes(currentStatus) ? getEstimatedTime(createTime, 5) : '',
+          time: order.preparingTime ? formatTime(order.preparingTime) : '',
           description: '商家正在精心制作您的美食'
         },
         { 
@@ -247,7 +247,7 @@ export default {
           status: 'READY', 
           type: 'warning', 
           icon: 'Warning',
-          time: ['READY', 'COMPLETED'].includes(currentStatus) ? getEstimatedTime(createTime, 15) : '',
+          time: order.readyTime ? formatTime(order.readyTime) : '',
           description: '美食已制作完成，请及时取餐'
         },
         { 
@@ -255,7 +255,7 @@ export default {
           status: 'COMPLETED', 
           type: 'success', 
           icon: 'Check',
-          time: currentStatus === 'COMPLETED' ? getEstimatedTime(createTime, 20) : '',
+          time: order.completedTime ? formatTime(order.completedTime) : '',
           description: '感谢您的光临，期待下次再见'
         }
       ]
@@ -269,15 +269,19 @@ export default {
             title: '订单已创建', 
             type: 'info', 
             icon: 'Clock',
-            time: formatTime(orderDetail.value?.createTime),
-            description: '订单已提交'
+            time: formatTime(order.createTime),
+            description: '订单已提交',
+            completed: true,
+            current: false
           },
           { 
             title: '订单已取消', 
             type: 'danger', 
             icon: 'Close',
-            time: formatTime(new Date()),
-            description: '订单已被取消'
+            time: order.cancelledTime ? formatTime(order.cancelledTime) : formatTime(order.updateTime),
+            description: '订单已被取消',
+            completed: true,
+            current: true
           }
         ]
       }
@@ -289,10 +293,7 @@ export default {
       })).filter((step, index) => index <= currentIndex || index === currentIndex + 1)
     }
     
-    const getEstimatedTime = (baseTime, minutesOffset) => {
-      const estimatedTime = new Date(baseTime.getTime() + minutesOffset * 60000)
-      return formatTime(estimatedTime)
-    }
+
     
     const getStepColor = (type) => {
       const colorMap = {

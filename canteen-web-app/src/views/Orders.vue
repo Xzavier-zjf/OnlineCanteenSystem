@@ -11,7 +11,7 @@
       <!-- 订单筛选和操作栏 -->
       <div class="order-toolbar" v-if="orders.length > 0">
         <div class="filter-section">
-          <el-select v-model="statusFilter" placeholder="筛选状态" clearable style="width: 150px">
+          <el-select v-model="statusFilter" placeholder="筛选状态" clearable style="width: 150px; margin-right: 10px;">
             <el-option label="全部" value="" />
             <el-option label="待支付" value="PENDING" />
             <el-option label="已支付" value="PAID" />
@@ -20,10 +20,38 @@
             <el-option label="已完成" value="COMPLETED" />
             <el-option label="已取消" value="CANCELLED" />
           </el-select>
+          
+          <el-select v-model="timeFilter" placeholder="时间筛选" clearable style="width: 150px; margin-right: 10px;">
+            <el-option label="全部时间" value="" />
+            <el-option label="今天" value="today" />
+            <el-option label="最近3天" value="3days" />
+            <el-option label="最近一周" value="week" />
+            <el-option label="最近一月" value="month" />
+          </el-select>
+          
+          <el-select v-model="amountFilter" placeholder="金额筛选" clearable style="width: 150px; margin-right: 10px;">
+            <el-option label="全部金额" value="" />
+            <el-option label="0-20元" value="0-20" />
+            <el-option label="20-50元" value="20-50" />
+            <el-option label="50-100元" value="50-100" />
+            <el-option label="100元以上" value="100+" />
+          </el-select>
+          
+          <el-select v-model="sortBy" placeholder="排序方式" style="width: 150px; margin-right: 10px;">
+            <el-option label="创建时间降序" value="create_desc" />
+            <el-option label="创建时间升序" value="create_asc" />
+            <el-option label="金额降序" value="amount_desc" />
+            <el-option label="金额升序" value="amount_asc" />
+            <el-option label="状态排序" value="status" />
+          </el-select>
         </div>
         <div class="action-section">
           <el-button type="primary" :icon="RefreshRight" @click="loadOrders" :loading="loading">
             刷新
+          </el-button>
+          <el-button type="info" @click="exportOrders" :disabled="filteredOrders.length === 0">
+            <el-icon><Download /></el-icon>
+            导出
           </el-button>
         </div>
       </div>
@@ -150,18 +178,21 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { orderApi } from '../api'
-import { List, Document, Plus, View, Close, CreditCard, RefreshRight, Check } from '@element-plus/icons-vue'
+import { List, Document, Plus, View, Close, CreditCard, RefreshRight, Check, Download } from '@element-plus/icons-vue'
 
 export default {
   name: 'Orders',
   components: {
-    List, Document, Plus, View, Close, CreditCard, RefreshRight, Check
+    List, Document, Plus, View, Close, CreditCard, RefreshRight, Check, Download
   },
   setup() {
     const router = useRouter()
     const loading = ref(false)
     const orders = ref([])
     const statusFilter = ref('')  // 状态筛选
+    const timeFilter = ref('')    // 时间筛选
+    const amountFilter = ref('')  // 金额筛选
+    const sortBy = ref('create_desc') // 排序方式
     const currentPage = ref(1)
     const pageSize = ref(5)
     const cancelingId = ref(null)
@@ -276,10 +307,79 @@ export default {
     
     // 筛选后的订单列表
     const filteredOrders = computed(() => {
-      if (!statusFilter.value) {
-        return orders.value
+      let filtered = [...orders.value]
+      
+      // 状态筛选
+      if (statusFilter.value) {
+        filtered = filtered.filter(order => order.status === statusFilter.value)
       }
-      return orders.value.filter(order => order.status === statusFilter.value)
+      
+      // 时间筛选
+      if (timeFilter.value) {
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        
+        filtered = filtered.filter(order => {
+          const orderDate = new Date(order.createTime)
+          
+          switch (timeFilter.value) {
+            case 'today':
+              return orderDate >= today
+            case '3days':
+              const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000)
+              return orderDate >= threeDaysAgo
+            case 'week':
+              const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+              return orderDate >= weekAgo
+            case 'month':
+              const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+              return orderDate >= monthAgo
+            default:
+              return true
+          }
+        })
+      }
+      
+      // 金额筛选
+      if (amountFilter.value) {
+        filtered = filtered.filter(order => {
+          const amount = parseFloat(order.totalAmount)
+          
+          switch (amountFilter.value) {
+            case '0-20':
+              return amount >= 0 && amount <= 20
+            case '20-50':
+              return amount > 20 && amount <= 50
+            case '50-100':
+              return amount > 50 && amount <= 100
+            case '100+':
+              return amount > 100
+            default:
+              return true
+          }
+        })
+      }
+      
+      // 排序
+      filtered.sort((a, b) => {
+        switch (sortBy.value) {
+          case 'create_asc':
+            return new Date(a.createTime) - new Date(b.createTime)
+          case 'create_desc':
+            return new Date(b.createTime) - new Date(a.createTime)
+          case 'amount_asc':
+            return parseFloat(a.totalAmount) - parseFloat(b.totalAmount)
+          case 'amount_desc':
+            return parseFloat(b.totalAmount) - parseFloat(a.totalAmount)
+          case 'status':
+            const statusOrder = ['PENDING', 'PAID', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED']
+            return statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status)
+          default:
+            return new Date(b.createTime) - new Date(a.createTime)
+        }
+      })
+      
+      return filtered
     })
     
     const pagedOrders = computed(() => {
@@ -366,6 +466,42 @@ export default {
       // TODO: 实现再来一单功能
     }
     
+    const exportOrders = () => {
+      try {
+        const exportData = filteredOrders.value.map(order => ({
+          '订单号': order.orderNo,
+          '订单状态': getStatusText(order.status),
+          '订单金额': `¥${order.totalAmount}`,
+          '创建时间': formatTime(order.createTime),
+          '更新时间': formatTime(order.updateTime),
+          '备注': order.remark || '无'
+        }))
+        
+        // 转换为CSV格式
+        const headers = Object.keys(exportData[0])
+        const csvContent = [
+          headers.join(','),
+          ...exportData.map(row => headers.map(header => `"${row[header]}"`).join(','))
+        ].join('\n')
+        
+        // 创建下载链接
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `订单记录_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
+        ElMessage.success(`已导出 ${exportData.length} 条订单记录`)
+      } catch (error) {
+        console.error('导出订单失败:', error)
+        ElMessage.error('导出失败，请重试')
+      }
+    }
+    
     onMounted(() => {
       // 重新获取最新的用户信息和token
       const token = localStorage.getItem('token')
@@ -399,6 +535,9 @@ export default {
       loading,
       orders,
       statusFilter,
+      timeFilter,
+      amountFilter,
+      sortBy,
       filteredOrders,
       currentPage,
       pageSize,
@@ -410,6 +549,7 @@ export default {
       cancelOrder,
       payOrder,
       confirmReceive,
+      exportOrders,
       reorder,
       handleSizeChange,
       handleCurrentChange,
@@ -549,5 +689,76 @@ export default {
   gap: 10px;
   justify-content: flex-end;
   margin-top: 15px;
+}
+
+/* 订单工具栏样式 */
+.order-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-section {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .order-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-section {
+    justify-content: center;
+  }
+  
+  .filter-section .el-select {
+    width: 100% !important;
+    margin-right: 0 !important;
+    margin-bottom: 8px;
+  }
+  
+  .action-section {
+    justify-content: center;
+  }
+  
+  .order-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .order-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* 订单状态标签样式增强 */
+.el-tag {
+  font-weight: 500;
+}
+
+/* 金额显示样式 */
+.amount-value {
+  color: #E6A23C;
+  font-weight: bold;
+  font-size: 1.1em;
 }
 </style>
