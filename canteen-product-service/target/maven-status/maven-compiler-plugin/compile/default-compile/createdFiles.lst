@@ -6,6 +6,7 @@ com\canteen\product\service\impl\MerchantProductServiceImpl.class
 com\canteen\product\service\MerchantProductService.class
 com\canteen\product\mapper\ProductCategoryMapper.class
 com\canteen\product\config\MyBatisConfig$1.class
+com\canteen\product\controller\ProductCompatController.class
 com\canteen\product\dto\MerchantProductDTO.class
 com\canteen\product\mapper\ProductMapper.class
 com\canteen\product\config\ApplicationRunnerConfig.class
@@ -21,3 +22,4 @@ com\canteen\product\config\MyBatisConfig.class
 com\canteen\product\entity\Product.class
 com\canteen\product\controller\AdminProductController.class
 com\canteen\product\controller\HealthController.class
+com\canteen\product\config\DataInitializer.class

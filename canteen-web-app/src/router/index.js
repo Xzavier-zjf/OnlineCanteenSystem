@@ -105,10 +105,35 @@ const router = createRouter({
   routes
 })
 
+// 获取用户角色首页
+const getRoleHomePage = (role) => {
+  switch (role) {
+    case 'ADMIN':
+      return '/admin/dashboard'
+    case 'MERCHANT':
+      return '/merchant/dashboard'
+    case 'USER':
+    default:
+      return '/'
+  }
+}
+
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  
+  // 如果已登录且访问登录页，重定向到对应首页
+  if (to.path === '/login' && token && userInfo.role) {
+    next(getRoleHomePage(userInfo.role))
+    return
+  }
+  
+  // 如果已登录且访问根路径，重定向到对应首页
+  if (to.path === '/' && token && userInfo.role && userInfo.role !== 'USER') {
+    next(getRoleHomePage(userInfo.role))
+    return
+  }
   
   // 检查是否需要认证
   if (to.meta.requiresAuth && !token) {
@@ -118,7 +143,8 @@ router.beforeEach((to, from, next) => {
   
   // 检查角色权限
   if (to.meta.role && userInfo.role !== to.meta.role) {
-    next('/')
+    // 如果角色不匹配，重定向到对应角色的首页
+    next(getRoleHomePage(userInfo.role))
     return
   }
   

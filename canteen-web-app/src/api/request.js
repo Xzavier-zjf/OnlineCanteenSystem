@@ -1,21 +1,17 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-// API基础URL配置
-const API_BASE_URLS = {
-  user: 'http://localhost:8081',
-  product: 'http://localhost:8082', 
-  order: 'http://localhost:8083',
-  recommend: 'http://localhost:8084'
-}
+// API基础URL配置 - 通过Vite代理连接Spring Boot后端
+const API_BASE_URL = '/api'
 
 // 创建axios实例
 export const request = axios.create({
-  baseURL: API_BASE_URLS.user,
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: false
 })
 
 // 请求拦截器
@@ -82,13 +78,55 @@ request.interceptors.response.use(
   }
 )
 
-// 创建不同服务的请求实例
+// 创建不同服务的请求实例 - 使用相对路径通过Vite代理
 export const createServiceRequest = (service) => {
-  return axios.create({
-    baseURL: API_BASE_URLS[service] || API_BASE_URLS.user,
+  // 使用相对路径，让Vite代理处理路由
+  const serviceUrl = `/api/${service}`
+  
+  console.log(`创建服务实例: ${service}, URL: ${serviceUrl} (通过Vite代理)`)
+  
+  const serviceRequest = axios.create({
+    baseURL: serviceUrl,
     timeout: 10000,
     headers: {
       'Content-Type': 'application/json'
-    }
+    },
+    withCredentials: false
   })
+  
+  // 添加请求拦截器
+  serviceRequest.interceptors.request.use(
+    config => {
+      const token = localStorage.getItem('token')
+      if (token && token !== 'undefined' && token !== 'null') {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+      console.log(`${service}服务请求:`, config.method?.toUpperCase(), config.url)
+      return config
+    },
+    error => {
+      console.error(`${service}服务请求错误:`, error)
+      return Promise.reject(error)
+    }
+  )
+  
+  // 添加响应拦截器
+  serviceRequest.interceptors.response.use(
+    response => {
+      console.log(`${service}服务响应:`, response.status, response.config.url)
+      return response
+    },
+    error => {
+      console.error(`${service}服务响应错误:`, error.message)
+      if (error.response?.status === 404) {
+        ElMessage.error(`${service}服务不可用，请检查后端服务是否启动`)
+      }
+      return Promise.reject(error)
+    }
+  )
+  
+  return serviceRequest
 }
+
+// 默认导出request实例
+export default request

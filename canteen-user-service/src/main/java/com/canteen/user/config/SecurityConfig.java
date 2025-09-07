@@ -53,9 +53,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 // 允许注册和登录接口
                 .requestMatchers(
-                    new AntPathRequestMatcher("/api/user/register"),
-                    new AntPathRequestMatcher("/api/user/login"),
-                    new AntPathRequestMatcher("/api/user/health"),
+                    new AntPathRequestMatcher("/api/users/register"),
+                    new AntPathRequestMatcher("/api/users/login"),
+                    new AntPathRequestMatcher("/api/users/health"),
                     new AntPathRequestMatcher("/api/users/info"),
                     new AntPathRequestMatcher("/api/users/stats"),
                     new AntPathRequestMatcher("/api/users/**")

@@ -8,37 +8,54 @@ import com.canteen.user.dto.AdminDTO;
 public interface AdminService {
 
     /**
-     * 管理员登录
-     */
-    AdminDTO.LoginResponse login(AdminDTO.LoginRequest request);
-
-    /**
      * 获取仪表板数据
+     * @param userId 用户ID
+     * @return 仪表板数据
      */
-    AdminDTO.DashboardResponse getDashboard();
+    AdminDTO.DashboardResponse getDashboard(Long userId);
 
     /**
-     * 获取用户列表
+     * 获取系统设置
+     * @param userId 用户ID
+     * @return 系统设置
      */
-    AdminDTO.PageResponse<AdminDTO.UserInfo> getUsers(Integer page, Integer size, String keyword, String role);
+    AdminDTO.SystemSettingsResponse getSystemSettings(Long userId);
 
     /**
-     * 更新用户状态
+     * 更新系统设置
+     * @param userId 用户ID
+     * @param request 更新请求
+     * @return 更新结果
      */
-    void updateUserStatus(Long userId, Integer status);
+    boolean updateSystemSettings(Long userId, AdminDTO.UpdateSystemSettingsRequest request);
 
     /**
-     * 重置用户密码
+     * 获取系统统计数据
+     * @param userId 用户ID
+     * @return 系统统计数据
      */
-    String resetUserPassword(Long userId);
+    AdminDTO.SystemStatsResponse getSystemStats(Long userId);
 
     /**
-     * 获取商户列表
+     * 系统备份
+     * @param userId 用户ID
+     * @return 备份结果
      */
-    AdminDTO.PageResponse<AdminDTO.MerchantInfo> getMerchants(Integer page, Integer size, String keyword);
+    AdminDTO.BackupResponse backup(Long userId);
 
     /**
-     * 审核商户
+     * 清理系统日志
+     * @param userId 用户ID
+     * @return 清理结果
      */
-    void approveMerchant(Long merchantId, Boolean approved, String reason);
+    boolean clearLogs(Long userId);
+
+    /**
+     * 获取系统日志
+     * @param userId 用户ID
+     * @param page 页码
+     * @param size 页大小
+     * @return 系统日志
+     */
+    AdminDTO.SystemLogsResponse getSystemLogs(Long userId, int page, int size);
 }

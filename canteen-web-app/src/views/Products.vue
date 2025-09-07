@@ -332,9 +332,13 @@ export default {
           current: currentPage.value,
           size: pageSize.value
         }
-        if (activeCategory.value !== 'all') {
+        
+        // 分类筛选 - 确保正确处理分类ID
+        if (activeCategory.value && activeCategory.value !== 'all') {
           params.categoryId = activeCategory.value
+          console.log('设置分类筛选参数:', params.categoryId)
         }
+        
         if (keyword.value && keyword.value.trim()) {
           params.keyword = keyword.value.trim()
         }
@@ -348,11 +352,22 @@ export default {
           params.stockFilter = stockFilter.value
         }
         
+        console.log('商品加载参数:', params)
         const response = await productApi.getProducts(params)
-        products.value = response.data.records
-        total.value = response.data.total
+        console.log('商品加载响应:', response)
+        
+        if (response && response.data) {
+          products.value = response.data.records || []
+          total.value = response.data.total || 0
+          console.log(`加载了 ${products.value.length} 个商品，总数: ${total.value}`)
+        } else {
+          products.value = []
+          total.value = 0
+        }
       } catch (error) {
         console.error('加载商品失败:', error)
+        products.value = []
+        total.value = 0
       } finally {
         loading.value = false
       }
@@ -377,6 +392,10 @@ export default {
             }
           } catch (personalizedError) {
             console.warn('个性化推荐失败，尝试热门推荐:', personalizedError)
+            // 如果是401错误，说明需要登录，跳过个性化推荐
+            if (personalizedError.response?.status === 401) {
+              console.log('推荐服务需要登录，使用匿名推荐')
+            }
           }
         }
         
@@ -446,6 +465,7 @@ export default {
     }
     
     const handleCategoryChange = (categoryId) => {
+      console.log('分类切换:', categoryId)
       activeCategory.value = categoryId
       currentPage.value = 1
       loadProducts()

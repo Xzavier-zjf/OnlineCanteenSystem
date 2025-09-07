@@ -4,10 +4,20 @@ server:
 spring:
   application:
     name: canteen-gateway
+  
+  # Nacos服务发现配置
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+        server-addr: localhost:8848
+        namespace: public
 
 # 日志配置
 logging:
   level:
     com.canteen.gateway: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web.cors: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

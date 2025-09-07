@@ -9,6 +9,14 @@ spring:
   main:
     allow-bean-definition-overriding: true
   
+  # Nacos服务发现配置
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+        server-addr: localhost:8848
+        namespace: public
+  
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

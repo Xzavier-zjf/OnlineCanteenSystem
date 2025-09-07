@@ -66,4 +66,56 @@ public interface UserService {
      * @return 用户统计数据
      */
     UserDTO.UserStatsResponse getUserStats(Long userId);
+
+    /**
+     * 获取用户个人资料
+     * @param userId 用户ID
+     * @return 用户个人资料
+     */
+    UserDTO.UserProfileResponse getUserProfile(Long userId);
+
+    /**
+     * 更新用户个人资料
+     * @param userId 用户ID
+     * @param request 更新请求
+     * @return 更新结果
+     */
+    boolean updateUserProfile(Long userId, UserDTO.UpdateProfileRequest request);
+
+    /**
+     * 获取用户登录记录
+     * @param userId 用户ID
+     * @return 登录记录
+     */
+    UserDTO.LoginRecordsResponse getLoginRecords(Long userId);
+
+    /**
+     * 获取通知设置
+     * @param userId 用户ID
+     * @return 通知设置
+     */
+    UserDTO.NotificationSettingsResponse getNotificationSettings(Long userId);
+
+    /**
+     * 更新通知设置
+     * @param userId 用户ID
+     * @param request 更新请求
+     * @return 更新结果
+     */
+    boolean updateNotificationSettings(Long userId, UserDTO.UpdateNotificationSettingsRequest request);
+
+    /**
+     * 获取偏好设置
+     * @param userId 用户ID
+     * @return 偏好设置
+     */
+    UserDTO.PreferenceSettingsResponse getPreferenceSettings(Long userId);
+
+    /**
+     * 更新偏好设置
+     * @param userId 用户ID
+     * @param request 更新请求
+     * @return 更新结果
+     */
+    boolean updatePreferenceSettings(Long userId, UserDTO.UpdatePreferenceSettingsRequest request);
 }

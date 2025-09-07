@@ -1,4 +1,6 @@
 com\canteen\gateway\config\WebClientConfig.class
 com\canteen\gateway\GatewayApplication.class
+com\canteen\gateway\config\WebConfig.class
 com\canteen\gateway\controller\GatewayController.class
+com\canteen\gateway\controller\RootController.class
 com\canteen\gateway\config\CorsConfig.class

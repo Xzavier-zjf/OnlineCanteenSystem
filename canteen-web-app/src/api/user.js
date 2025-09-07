@@ -4,31 +4,31 @@ import { request } from './request'
 export const userApi = {
   // 获取用户信息
   getProfile: () => {
-    return request.get('/api/users/info')
+    return request.get('/info')
   },
   
   // 更新用户信息
   updateProfile: (data) => {
-    return request.put('/api/users/info', data)
+    return request.put('/info', data)
   },
   
   // 修改密码
   changePassword: (data) => {
-    return request.post('/api/users/change-password', data)
+    return request.post('/change-password', data)
   },
   
   // 获取用户统计数据
   getUserStats: () => {
-    return request.get('/api/users/stats')
+    return request.get('/stats')
   },
   
   // 用户登录
   login: (data) => {
-    return request.post('/api/users/login', data)
+    return request.post('/login', data)
   },
   
   // 用户注册
   register: (data) => {
-    return request.post('/api/users/register', data)
+    return request.post('/register', data)
   }
 }

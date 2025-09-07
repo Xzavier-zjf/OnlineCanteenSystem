@@ -28,24 +28,38 @@ public class ProductController {
     private ProductCategoryService categoryService;
 
     /**
-     * 获取餐品列表（分页）
+     * 获取餐品列表（分页）- 支持排序和价格筛选
      */
     @GetMapping
     public Result<PageResult<Product>> getProductList(
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String priceRange,
+            @RequestParam(required = false) String sortBy) {
         
-        Page<Product> result = productService.getProductList(current, size, categoryId, keyword);
-        PageResult<Product> pageResult = PageResult.of(
-            result.getTotal(), 
-            result.getRecords(), 
-            result.getCurrent(), 
-            result.getSize()
-        );
-        
-        return Result.success(pageResult);
+        try {
+            Page<Product> result;
+            
+            // 如果有高级筛选参数，使用带筛选的方法
+            if (priceRange != null || sortBy != null) {
+                result = productService.getProductListWithFilters(current, size, categoryId, keyword, priceRange, sortBy);
+            } else {
+                result = productService.getProductList(current, size, categoryId, keyword);
+            }
+            
+            PageResult<Product> pageResult = PageResult.of(
+                result.getTotal(), 
+                result.getRecords(), 
+                result.getCurrent(), 
+                result.getSize()
+            );
+            
+            return Result.success(pageResult);
+        } catch (Exception e) {
+            return Result.error("获取商品列表失败: " + e.getMessage());
+        }
     }
 
     /**

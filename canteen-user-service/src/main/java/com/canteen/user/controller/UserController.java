@@ -136,6 +136,114 @@ public class UserController {
     }
 
     /**
+     * 获取用户个人资料
+     */
+    @GetMapping("/profile")
+    public Result<UserDTO.UserProfileResponse> getUserProfile(HttpServletRequest request) {
+        try {
+            Long userId = getUserIdFromToken(request);
+            UserDTO.UserProfileResponse profile = userService.getUserProfile(userId);
+            return Result.success("获取个人资料成功", profile);
+        } catch (Exception e) {
+            log.error("获取个人资料失败: {}", e.getMessage(), e);
+            return Result.error("获取个人资料失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新用户个人资料
+     */
+    @PutMapping("/profile")
+    public Result<Boolean> updateUserProfile(HttpServletRequest request,
+                                           @RequestBody UserDTO.UpdateProfileRequest updateRequest) {
+        try {
+            Long userId = getUserIdFromToken(request);
+            boolean success = userService.updateUserProfile(userId, updateRequest);
+            return Result.success("更新个人资料成功", success);
+        } catch (Exception e) {
+            log.error("更新个人资料失败: {}", e.getMessage(), e);
+            return Result.error("更新个人资料失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取用户登录记录
+     */
+    @GetMapping("/login-records")
+    public Result<UserDTO.LoginRecordsResponse> getLoginRecords(HttpServletRequest request) {
+        try {
+            Long userId = getUserIdFromToken(request);
+            UserDTO.LoginRecordsResponse records = userService.getLoginRecords(userId);
+            return Result.success("获取登录记录成功", records);
+        } catch (Exception e) {
+            log.error("获取登录记录失败: {}", e.getMessage(), e);
+            return Result.error("获取登录记录失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取通知设置
+     */
+    @GetMapping("/notification-settings")
+    public Result<UserDTO.NotificationSettingsResponse> getNotificationSettings(HttpServletRequest request) {
+        try {
+            Long userId = getUserIdFromToken(request);
+            UserDTO.NotificationSettingsResponse settings = userService.getNotificationSettings(userId);
+            return Result.success("获取通知设置成功", settings);
+        } catch (Exception e) {
+            log.error("获取通知设置失败: {}", e.getMessage(), e);
+            return Result.error("获取通知设置失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新通知设置
+     */
+    @PutMapping("/notification-settings")
+    public Result<Boolean> updateNotificationSettings(HttpServletRequest request,
+                                                    @RequestBody UserDTO.UpdateNotificationSettingsRequest updateRequest) {
+        try {
+            Long userId = getUserIdFromToken(request);
+            boolean success = userService.updateNotificationSettings(userId, updateRequest);
+            return Result.success("更新通知设置成功", success);
+        } catch (Exception e) {
+            log.error("更新通知设置失败: {}", e.getMessage(), e);
+            return Result.error("更新通知设置失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取偏好设置
+     */
+    @GetMapping("/preference-settings")
+    public Result<UserDTO.PreferenceSettingsResponse> getPreferenceSettings(HttpServletRequest request) {
+        try {
+            Long userId = getUserIdFromToken(request);
+            UserDTO.PreferenceSettingsResponse settings = userService.getPreferenceSettings(userId);
+            return Result.success("获取偏好设置成功", settings);
+        } catch (Exception e) {
+            log.error("获取偏好设置失败: {}", e.getMessage(), e);
+            return Result.error("获取偏好设置失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新偏好设置
+     */
+    @PutMapping("/preference-settings")
+    public Result<Boolean> updatePreferenceSettings(HttpServletRequest request,
+                                                  @RequestBody UserDTO.UpdatePreferenceSettingsRequest updateRequest) {
+        try {
+            Long userId = getUserIdFromToken(request);
+            boolean success = userService.updatePreferenceSettings(userId, updateRequest);
+            return Result.success("更新偏好设置成功", success);
+        } catch (Exception e) {
+            log.error("更新偏好设置失败: {}", e.getMessage(), e);
+            return Result.error("更新偏好设置失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 简单测试接口
      */
     @PostMapping("/test")

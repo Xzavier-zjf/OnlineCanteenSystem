@@ -1,12 +1,27 @@
 {
-  "name": "onlinecanteensystem",
+  "name": "canteen-mock-server",
   "version": "1.0.0",
-  "description": "## 项目概述 本项目是一个基于Spring Boot微服务架构的高校食堂订餐系统，包含用户管理、餐品管理、订单管理等核心功能。",
-  "main": "index.js",
+  "description": "Mock server for canteen management system",
+  "main": "mock-server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node mock-server.js",
+    "dev": "nodemon mock-server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "dependencies": {
+    "axios": "^1.11.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "mock",
+    "server",
+    "api",
+    "canteen"
+  ],
+  "author": "Developer",
+  "license": "MIT"
 }

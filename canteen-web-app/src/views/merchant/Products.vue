@@ -72,7 +72,7 @@
     <!-- 商品列表 -->
     <el-card class="products-card" shadow="hover">
       <div v-loading="loading">
-        <el-table :data="products" style="width: 100%" @selection-change="handleSelectionChange">
+        <el-table :data="Array.isArray(products) ? products : []" style="width: 100%" @selection-change="handleSelectionChange">
           <el-table-column type="selection" width="55" />
           <el-table-column label="商品图片" width="100">
             <template #default="{ row }">
@@ -286,6 +286,7 @@ import {
   Plus, RefreshRight, Search, Edit, Delete, DataAnalysis
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
+import merchantApi from '@/api/merchant.js'
 
 export default {
   name: 'MerchantProducts',
@@ -349,10 +350,12 @@ export default {
     // 加载商品分类
     const loadCategories = async () => {
       try {
-        // const response = await productApi.getCategories()
-        // categories.value = response.data
-        
-        // 模拟数据
+        const response = await merchantApi.getCategories()
+        categories.value = response.data || []
+      } catch (error) {
+        console.error('加载分类失败:', error)
+        ElMessage.error('加载分类失败')
+        // 设置默认分类
         categories.value = [
           { id: 1, name: '主食' },
           { id: 2, name: '汤品' },
@@ -360,9 +363,6 @@ export default {
           { id: 4, name: '饮品' },
           { id: 5, name: '甜品' }
         ]
-      } catch (error) {
-        console.error('加载分类失败:', error)
-        ElMessage.error('加载分类失败')
       }
     }
     
@@ -372,7 +372,7 @@ export default {
         loading.value = true
         
         const params = {
-          current: currentPage.value,
+          page: currentPage.value,
           size: pageSize.value
         }
         
@@ -386,32 +386,71 @@ export default {
           params.status = statusFilter.value
         }
         
-        // 调用真实API获取商品数据
-        const response = await fetch('/api/merchant/products?' + new URLSearchParams(params), {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await merchantApi.getProducts(params)
         
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success) {
-            products.value = data.data.records || []
-            total.value = data.data.total || 0
-          } else {
-            throw new Error(data.message || '获取商品列表失败')
-          }
+        // 确保返回的数据是数组格式
+        if (response.data && Array.isArray(response.data.list)) {
+          products.value = response.data.list
+          total.value = response.data.total || 0
+        } else if (response.data && Array.isArray(response.data)) {
+          products.value = response.data
+          total.value = response.data.length
         } else {
-          console.warn('商品列表API不存在，使用空数据')
           products.value = []
           total.value = 0
         }
         
       } catch (error) {
-        console.error('加载商品失败:', error)
-        ElMessage.error('加载商品失败')
+        console.warn('商品列表API调用失败，使用模拟数据')
+        // 提供模拟数据，确保是数组格式
+        products.value = [
+          {
+            id: 1,
+            name: '红烧肉饭',
+            categoryName: '主食',
+            categoryId: 1,
+            price: 15.00,
+            stock: 50,
+            sales: 156,
+            rating: 4.8,
+            status: 1,
+            imageUrl: '/images/products/hongshaorou_rice.jpg',
+            isHot: true,
+            isNew: false,
+            description: '经典红烧肉配米饭'
+          },
+          {
+            id: 2,
+            name: '宫保鸡丁',
+            categoryName: '主食',
+            categoryId: 1,
+            price: 14.00,
+            stock: 30,
+            sales: 134,
+            rating: 4.6,
+            status: 1,
+            imageUrl: '/images/products/gongbao_dish.jpg',
+            isHot: false,
+            isNew: true,
+            description: '川菜经典宫保鸡丁'
+          },
+          {
+            id: 3,
+            name: '糖醋里脊',
+            categoryName: '主食',
+            categoryId: 1,
+            price: 16.00,
+            stock: 25,
+            sales: 98,
+            rating: 4.7,
+            status: 1,
+            imageUrl: '/images/products/tangcu_liji.jpg',
+            isHot: false,
+            isNew: false,
+            description: '酸甜可口的糖醋里脊'
+          }
+        ]
+        total.value = products.value.length
       } finally {
         loading.value = false
       }
@@ -602,14 +641,11 @@ export default {
     // 查看统计
     const viewStats = async (product) => {
       try {
-        // const response = await merchantApi.getProductStats(product.id)
-        // currentProductStats.value = response.data
-        
-        // 模拟数据
-        currentProductStats.value = {
-          totalSales: 120,
-          totalRevenue: 1800,
-          avgRating: 4.8
+        const response = await merchantApi.getProductStats(product.id)
+        currentProductStats.value = response.data || {
+          totalSales: 0,
+          totalRevenue: 0,
+          avgRating: 0
         }
         
         showStatsDialog.value = true

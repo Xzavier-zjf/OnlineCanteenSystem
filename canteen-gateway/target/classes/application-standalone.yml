@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: canteen-gateway
+  
+  # 禁用Nacos服务发现
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+
+# 服务地址配置 - 直接配置后端服务地址
+services:
+  product-service: http://localhost:8082
+  user-service: http://localhost:8081
+  order-service: http://localhost:8083
+  recommend-service: http://localhost:8084
+
+logging:
+  level:
+    root: INFO
+    com.canteen: DEBUG
+    org.springframework.cloud: OFF
+    com.alibaba.nacos: OFF

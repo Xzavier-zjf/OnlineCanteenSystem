@@ -5,7 +5,7 @@ spring:
   application:
     name: canteen-user-service
   
-  # Nacos服务发现配置 - 临时禁用
+  # Nacos服务发现配置
   cloud:
     nacos:
       discovery:

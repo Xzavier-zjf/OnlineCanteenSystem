@@ -49,6 +49,13 @@
             <artifactId>mysql-connector-j</artifactId>
         </dependency>
 
+        <!-- H2 Database (for standalone mode) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Spring Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -34,7 +34,7 @@
       </div>
 
       <!-- 用户列表 -->
-      <el-table :data="userList" style="width: 100%" v-loading="loading">
+      <el-table :data="Array.isArray(userList) ? userList : []" style="width: 100%" v-loading="loading">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" width="150" />
         <el-table-column prop="email" label="邮箱" width="200" />

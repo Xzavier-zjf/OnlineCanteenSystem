@@ -3,37 +3,42 @@ package com.canteen.gateway.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.reactive.CorsWebFilter;
-import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
 
 /**
- * CORS跨域配置
+ * CORS跨域配置 - 适用于传统Spring Boot Web
  */
 @Configuration
 public class CorsConfig {
 
     @Bean
-    public CorsWebFilter corsWebFilter() {
-        CorsConfiguration config = new CorsConfiguration();
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
         
-        // 允许所有来源
-        config.addAllowedOriginPattern("*");
+        // 允许的来源
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         
-        // 允许所有请求头
-        config.addAllowedHeader("*");
+        // 允许的请求头
+        configuration.setAllowedHeaders(Arrays.asList("*"));
         
-        // 允许所有请求方法
-        config.addAllowedMethod("*");
+        // 允许的请求方法
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         
         // 允许携带凭证
-        config.setAllowCredentials(true);
+        configuration.setAllowCredentials(true);
         
         // 预检请求的缓存时间
-        config.setMaxAge(3600L);
+        configuration.setMaxAge(3600L);
+        
+        // 暴露的响应头
+        configuration.setExposedHeaders(Arrays.asList("*"));
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        source.registerCorsConfiguration("/**", configuration);
         
-        return new CorsWebFilter(source);
+        return source;
     }
 }

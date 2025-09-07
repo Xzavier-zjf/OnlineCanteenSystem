@@ -232,4 +232,119 @@ public class UserServiceImpl implements UserService {
             return stats;
         }
     }
+
+    @Override
+    public UserDTO.UserProfileResponse getUserProfile(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        UserDTO.UserProfileResponse response = new UserDTO.UserProfileResponse();
+        BeanUtils.copyProperties(user, response);
+        return response;
+    }
+
+    @Override
+    @Transactional
+    public boolean updateUserProfile(Long userId, UserDTO.UpdateProfileRequest request) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        // 检查邮箱是否被其他用户使用
+        if (request.getEmail() != null && !request.getEmail().isEmpty()) {
+            QueryWrapper<User> emailWrapper = new QueryWrapper<>();
+            emailWrapper.eq("email", request.getEmail());
+            emailWrapper.ne("id", userId);
+            User existEmailUser = userMapper.selectOne(emailWrapper);
+            if (existEmailUser != null) {
+                throw new BusinessException("邮箱已被其他用户使用");
+            }
+        }
+
+        // 更新用户资料
+        if (request.getRealName() != null) user.setRealName(request.getRealName());
+        if (request.getEmail() != null) user.setEmail(request.getEmail());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getCollege() != null) user.setCollege(request.getCollege());
+        if (request.getAddress() != null) user.setAddress(request.getAddress());
+        if (request.getAvatar() != null) user.setAvatar(request.getAvatar());
+        user.setUpdateTime(LocalDateTime.now());
+
+        int result = userMapper.updateById(user);
+        log.info("用户资料更新成功: {}", userId);
+        return result > 0;
+    }
+
+    @Override
+    public UserDTO.LoginRecordsResponse getLoginRecords(Long userId) {
+        // 这里可以从数据库查询登录记录，暂时返回模拟数据
+        UserDTO.LoginRecordsResponse response = new UserDTO.LoginRecordsResponse();
+        java.util.List<UserDTO.LoginRecordsResponse.LoginRecord> records = new java.util.ArrayList<>();
+        
+        // 添加一些示例登录记录
+        UserDTO.LoginRecordsResponse.LoginRecord record1 = new UserDTO.LoginRecordsResponse.LoginRecord();
+        record1.setId(1L);
+        record1.setLoginTime(LocalDateTime.now().minusDays(1).toString());
+        record1.setLoginIp("192.168.1.100");
+        record1.setLoginLocation("北京市");
+        record1.setUserAgent("Chrome/120.0.0.0");
+        record1.setStatus("SUCCESS");
+        records.add(record1);
+
+        UserDTO.LoginRecordsResponse.LoginRecord record2 = new UserDTO.LoginRecordsResponse.LoginRecord();
+        record2.setId(2L);
+        record2.setLoginTime(LocalDateTime.now().toString());
+        record2.setLoginIp("192.168.1.100");
+        record2.setLoginLocation("北京市");
+        record2.setUserAgent("Chrome/120.0.0.0");
+        record2.setStatus("SUCCESS");
+        records.add(record2);
+
+        response.setRecords(records);
+        return response;
+    }
+
+    @Override
+    public UserDTO.NotificationSettingsResponse getNotificationSettings(Long userId) {
+        // 这里可以从数据库查询通知设置，暂时返回默认设置
+        UserDTO.NotificationSettingsResponse response = new UserDTO.NotificationSettingsResponse();
+        response.setEmailNotification(true);
+        response.setSmsNotification(false);
+        response.setOrderNotification(true);
+        response.setPromotionNotification(true);
+        response.setSystemNotification(true);
+        return response;
+    }
+
+    @Override
+    @Transactional
+    public boolean updateNotificationSettings(Long userId, UserDTO.UpdateNotificationSettingsRequest request) {
+        // 这里可以将设置保存到数据库，暂时只记录日志
+        log.info("更新用户{}的通知设置: {}", userId, request);
+        return true;
+    }
+
+    @Override
+    public UserDTO.PreferenceSettingsResponse getPreferenceSettings(Long userId) {
+        // 这里可以从数据库查询偏好设置，暂时返回默认设置
+        UserDTO.PreferenceSettingsResponse response = new UserDTO.PreferenceSettingsResponse();
+        response.setLanguage("zh-CN");
+        response.setTheme("light");
+        response.setTimezone("Asia/Shanghai");
+        response.setAutoLogin(false);
+        response.setPageSize(20);
+        response.setDefaultPayment("alipay");
+        return response;
+    }
+
+    @Override
+    @Transactional
+    public boolean updatePreferenceSettings(Long userId, UserDTO.UpdatePreferenceSettingsRequest request) {
+        // 这里可以将设置保存到数据库，暂时只记录日志
+        log.info("更新用户{}的偏好设置: {}", userId, request);
+        return true;
+    }
 }

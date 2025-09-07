@@ -65,7 +65,7 @@
             <span>最近订单</span>
             <el-button type="primary" size="small" @click="viewAllOrders">查看全部</el-button>
           </template>
-          <el-table :data="recentOrders" style="width: 100%">
+          <el-table :data="Array.isArray(recentOrders) ? recentOrders : []" style="width: 100%">
             <el-table-column prop="orderNo" label="订单号" width="180" />
             <el-table-column prop="userName" label="用户" width="120" />
             <el-table-column prop="totalAmount" label="金额" width="100">
@@ -108,13 +108,18 @@ const loadDashboardData = async () => {
   try {
     // 加载统计数据
     const statsResponse = await adminApi.getDashboardStats()
-    stats.value = statsResponse.data
+    if (statsResponse && statsResponse.data) {
+      stats.value = { ...stats.value, ...statsResponse.data }
+    }
 
     // 加载最近订单
     const ordersResponse = await adminApi.getRecentOrders()
-    recentOrders.value = ordersResponse.data
+    if (ordersResponse && ordersResponse.data) {
+      recentOrders.value = Array.isArray(ordersResponse.data) ? ordersResponse.data : []
+    }
   } catch (error) {
     console.error('加载仪表板数据失败:', error)
+    // 保持默认值，不覆盖现有数据
   }
 }
 

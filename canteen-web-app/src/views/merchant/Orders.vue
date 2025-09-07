@@ -196,7 +196,7 @@
                   :loading="processingOrders.includes(order.id)"
                   @click="startPreparing(order)"
                 >
-                  <el-icon><Play /></el-icon>
+                  <el-icon><VideoPlay /></el-icon>
                   开始制作
                 </el-button>
                 
@@ -292,15 +292,16 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Clock, Loading, Check, RefreshRight, Search, Download,
-  View, Play, Bell, Close, ArrowDown, Printer, RefreshLeft,
+  View, VideoPlay, Bell, Close, ArrowDown, Printer, RefreshLeft,
   ChatDotRound
 } from '@element-plus/icons-vue'
+import merchantApi from '@/api/merchant.js'
 
 export default {
   name: 'MerchantOrders',
   components: {
     Clock, Loading, Check, RefreshRight, Search, Download,
-    View, Play, Bell, Close, ArrowDown, Printer, RefreshLeft,
+    View, VideoPlay, Bell, Close, ArrowDown, Printer, RefreshLeft,
     ChatDotRound
   },
   setup() {
@@ -387,25 +388,16 @@ export default {
           params.amountRange = amountFilter.value
         }
         
-        // 调用真实API获取订单数据
-        const response = await fetch('/api/merchant/orders?' + new URLSearchParams(params), {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        // 调用merchant API获取订单数据
+        const response = await merchantApi.getOrders(params)
         
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success) {
-            orders.value = data.data.records || []
-            total.value = data.data.total || 0
-          } else {
-            throw new Error(data.message || '获取订单列表失败')
-          }
+        if (response.data && Array.isArray(response.data.list)) {
+          orders.value = response.data.list
+          total.value = response.data.total || 0
+        } else if (response.data && Array.isArray(response.data)) {
+          orders.value = response.data
+          total.value = response.data.length
         } else {
-          console.warn('订单列表API不存在，使用空数据')
           orders.value = []
           total.value = 0
         }
@@ -498,12 +490,12 @@ export default {
     const startPreparing = async (order) => {
       try {
         processingOrders.value.push(order.id)
-        // await merchantApi.startPreparing(order.id)
+        await merchantApi.startPreparing(order.id)
         ElMessage.success('订单已开始制作')
         loadOrders()
       } catch (error) {
         console.error('开始制作失败:', error)
-        ElMessage.error('操作失败')
+        ElMessage.error('操作失败，请重试')
       } finally {
         processingOrders.value = processingOrders.value.filter(id => id !== order.id)
       }
@@ -512,12 +504,12 @@ export default {
     const markReady = async (order) => {
       try {
         processingOrders.value.push(order.id)
-        // await merchantApi.markReady(order.id)
+        await merchantApi.markReady(order.id)
         ElMessage.success('订单制作完成，已通知用户取餐')
         loadOrders()
       } catch (error) {
         console.error('标记完成失败:', error)
-        ElMessage.error('操作失败')
+        ElMessage.error('操作失败，请重试')
       } finally {
         processingOrders.value = processingOrders.value.filter(id => id !== order.id)
       }
@@ -525,11 +517,11 @@ export default {
     
     const notifyCustomer = async (order) => {
       try {
-        // await merchantApi.notifyCustomer(order.id)
+        await merchantApi.notifyCustomer(order.id, '您的订单已制作完成，请及时取餐')
         ElMessage.success('已通知用户取餐')
       } catch (error) {
         console.error('通知失败:', error)
-        ElMessage.error('通知失败')
+        ElMessage.error('通知失败，请重试')
       }
     }
     
@@ -545,7 +537,7 @@ export default {
           }
         )
         
-        // await merchantApi.cancelOrder(order.id)
+        await merchantApi.cancelOrder(order.id, '商户取消订单')
         ElMessage.success('订单已取消')
         loadOrders()
       } catch (error) {

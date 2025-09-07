@@ -9,7 +9,7 @@ import org.springframework.context.annotation.ComponentScan;
  * API网关启动类
  */
 @SpringBootApplication
-@EnableDiscoveryClient
+// @EnableDiscoveryClient  // 临时禁用，因为Nacos未启动
 @ComponentScan(basePackages = {"com.canteen.gateway", "com.canteen.common"})
 public class GatewayApplication {
 

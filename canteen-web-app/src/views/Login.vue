@@ -128,7 +128,23 @@ export default {
           window.dispatchEvent(new Event('storage'))
           
           ElMessage.success('登录成功')
-          router.push('/products')
+          
+          // 根据用户角色跳转到对应首页
+          const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+          const role = userInfo.role || loginData.role
+          
+          switch (role) {
+            case 'ADMIN':
+              router.push('/admin/dashboard')
+              break
+            case 'MERCHANT':
+              router.push('/merchant/dashboard')
+              break
+            case 'USER':
+            default:
+              router.push('/')
+              break
+          }
         } else {
           const errorMsg = response?.message || '登录失败: 用户名或密码错误'
           ElMessage.error(errorMsg)

@@ -7,6 +7,8 @@ D:\IdeaProjects\online-canteen-system\canteen-product-service\src\main\java\com\
 D:\IdeaProjects\online-canteen-system\canteen-product-service\src\main\java\com\canteen\product\service\AdminProductService.java
 D:\IdeaProjects\online-canteen-system\canteen-product-service\src\main\java\com\canteen\product\service\impl\MerchantProductServiceImpl.java
 D:\IdeaProjects\online-canteen-system\canteen-product-service\src\main\java\com\canteen\product\config\CorsConfig.java
+D:\IdeaProjects\online-canteen-system\canteen-product-service\src\main\java\com\canteen\product\config\DataInitializer.java
+D:\IdeaProjects\online-canteen-system\canteen-product-service\src\main\java\com\canteen\product\controller\ProductCompatController.java
 D:\IdeaProjects\online-canteen-system\canteen-product-service\src\main\java\com\canteen\product\service\impl\AdminProductServiceImpl.java
 D:\IdeaProjects\online-canteen-system\canteen-product-service\src\main\java\com\canteen\product\config\MyBatisConfig.java
 D:\IdeaProjects\online-canteen-system\canteen-product-service\src\main\java\com\canteen\product\controller\ProductController.java
