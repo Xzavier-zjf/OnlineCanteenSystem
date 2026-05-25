@@ -1,0 +1,43 @@
+# Java / Maven build output
+target/
+**/target/
+
+# Node / Vite build output and dependency installs
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
+
+# Runtime upload files
+uploads/
+**/uploads/
+
+# Logs and local runtime files
+*.log
+logs/
+*.pid
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# IDE and OS metadata
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Temporary/editor backup files
+*~
+*.bak
+*.tmp
+*.swp
+*.swo
+*.orig
+*.rej
+*.class
+*.jar

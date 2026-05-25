@@ -29,6 +29,36 @@ export default defineConfig({
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
           });
         }
+      },
+      '/uploads': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined
+          }
+          if (id.includes('element-plus') || id.includes('@element-plus/icons-vue')) {
+            return 'element-plus'
+          }
+          if (id.includes('echarts')) {
+            return 'echarts'
+          }
+          if (id.includes('vuedraggable') || id.includes('sortablejs')) {
+            return 'draggable'
+          }
+          if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
+            return 'vue-vendor'
+          }
+          return 'vendor'
+        }
       }
     }
   }

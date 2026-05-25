@@ -1,6 +1,7 @@
 package com.canteen.user.controller;
 
 import com.canteen.common.result.Result;
+import com.canteen.common.utils.AuthContext;
 import com.canteen.common.utils.JwtUtils;
 import com.canteen.user.dto.AdminDTO;
 import com.canteen.user.service.AdminService;
@@ -43,7 +44,7 @@ public class AdminController {
     @GetMapping("/system-settings")
     public Result<AdminDTO.SystemSettingsResponse> getSystemSettings(HttpServletRequest request) {
         try {
-            Long userId = getUserIdFromToken(request);
+            Long userId = getAdminIdFromToken(request);
             AdminDTO.SystemSettingsResponse settings = adminService.getSystemSettings(userId);
             return Result.success("获取系统设置成功", settings);
         } catch (Exception e) {
@@ -69,12 +70,43 @@ public class AdminController {
     }
 
     /**
+     * 获取推荐策略配置
+     */
+    @GetMapping("/recommend-config")
+    public Result<AdminDTO.RecommendConfigResponse> getRecommendConfig(HttpServletRequest request) {
+        try {
+            Long userId = getAdminIdFromToken(request);
+            AdminDTO.RecommendConfigResponse config = adminService.getRecommendConfig(userId);
+            return Result.success("获取推荐策略配置成功", config);
+        } catch (Exception e) {
+            log.error("获取推荐策略配置失败: {}", e.getMessage(), e);
+            return Result.error("获取推荐策略配置失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新推荐策略配置
+     */
+    @PutMapping("/recommend-config")
+    public Result<Boolean> updateRecommendConfig(HttpServletRequest request,
+                                                 @RequestBody AdminDTO.RecommendConfigResponse updateRequest) {
+        try {
+            Long userId = getAdminIdFromToken(request);
+            boolean success = adminService.updateRecommendConfig(userId, updateRequest);
+            return Result.success("更新推荐策略配置成功", success);
+        } catch (Exception e) {
+            log.error("更新推荐策略配置失败: {}", e.getMessage(), e);
+            return Result.error("更新推荐策略配置失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 获取系统统计数据
      */
     @GetMapping("/system-stats")
     public Result<AdminDTO.SystemStatsResponse> getSystemStats(HttpServletRequest request) {
         try {
-            Long userId = getUserIdFromToken(request);
+            Long userId = getAdminIdFromToken(request);
             AdminDTO.SystemStatsResponse stats = adminService.getSystemStats(userId);
             return Result.success("获取系统统计数据成功", stats);
         } catch (Exception e) {
@@ -140,5 +172,11 @@ public class AdminController {
             return JwtUtils.getUserIdFromToken(token);
         }
         throw new RuntimeException("Token无效");
+    }
+
+    private Long getAdminIdFromToken(HttpServletRequest request) {
+        AuthContext auth = AuthContext.from(request);
+        auth.requireRole("ADMIN");
+        return auth.getUserId();
     }
 }

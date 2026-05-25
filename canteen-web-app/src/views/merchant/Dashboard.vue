@@ -262,8 +262,8 @@ export default {
           Object.assign(stats, response.data)
         }
       } catch (error) {
-        console.warn('商户统计API不存在，使用默认值')
-        // 使用默认值，不显示错误消息
+        console.error('加载商户统计失败:', error)
+        ElMessage.error('加载商户统计失败')
         Object.assign(stats, {
           todayOrders: 0,
           todaySales: '0.00',
@@ -294,34 +294,9 @@ export default {
           pendingOrders.value = []
         }
       } catch (error) {
-        console.warn('待处理订单API调用失败，使用模拟数据')
-        // 提供模拟数据，确保是数组格式
-        pendingOrders.value = [
-          {
-            id: 1,
-            orderNo: 'ORD202401150001',
-            status: 'PAID',
-            totalAmount: 45.50,
-            createTime: new Date().toISOString(),
-            customerName: '张同学'
-          },
-          {
-            id: 2,
-            orderNo: 'ORD202401150002',
-            status: 'PREPARING',
-            totalAmount: 32.00,
-            createTime: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-            customerName: '李同学'
-          },
-          {
-            id: 3,
-            orderNo: 'ORD202401150003',
-            status: 'PAID',
-            totalAmount: 28.50,
-            createTime: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-            customerName: '王同学'
-          }
-        ]
+        console.error('待处理订单API调用失败:', error)
+        ElMessage.error('待处理订单加载失败')
+        pendingOrders.value = []
       } finally {
         ordersLoading.value = false
       }
@@ -342,45 +317,9 @@ export default {
           hotProducts.value = []
         }
       } catch (error) {
-        console.warn('热销商品API调用失败，使用模拟数据')
-        // 提供模拟数据，确保是数组格式
-        hotProducts.value = [
-          {
-            rank: 1,
-            name: '红烧肉饭',
-            sales: 156,
-            revenue: 2340.00,
-            rating: 4.8
-          },
-          {
-            rank: 2,
-            name: '宫保鸡丁',
-            sales: 134,
-            revenue: 1876.00,
-            rating: 4.6
-          },
-          {
-            rank: 3,
-            name: '糖醋里脊',
-            sales: 98,
-            revenue: 1568.00,
-            rating: 4.7
-          },
-          {
-            rank: 4,
-            name: '麻婆豆腐',
-            sales: 87,
-            revenue: 1218.00,
-            rating: 4.5
-          },
-          {
-            rank: 5,
-            name: '青椒肉丝',
-            sales: 76,
-            revenue: 1064.00,
-            rating: 4.4
-          }
-        ]
+        console.error('热销商品API调用失败:', error)
+        ElMessage.error('热销商品加载失败')
+        hotProducts.value = []
       } finally {
         productsLoading.value = false
       }
@@ -483,7 +422,7 @@ export default {
     // 订单操作
     const startPreparing = async (orderId) => {
       try {
-        // await merchantApi.startPreparing(orderId)
+        await merchantApi.startPreparing(orderId)
         ElMessage.success('订单已开始制作')
         loadPendingOrders()
       } catch (error) {
@@ -494,7 +433,7 @@ export default {
     
     const markReady = async (orderId) => {
       try {
-        // await merchantApi.markReady(orderId)
+        await merchantApi.markReady(orderId)
         ElMessage.success('订单已标记为待取餐')
         loadPendingOrders()
       } catch (error) {

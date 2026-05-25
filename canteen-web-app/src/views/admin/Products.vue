@@ -45,8 +45,8 @@
         <el-table-column label="商品图片" width="100">
           <template #default="scope">
             <el-image 
-              :src="scope.row.imageUrl" 
-              :preview-src-list="[scope.row.imageUrl]"
+              :src="getImageUrl(scope.row.imageUrl)" 
+              :preview-src-list="[getImageUrl(scope.row.imageUrl)]"
               style="width: 60px; height: 60px"
               fit="cover"
             />
@@ -106,7 +106,7 @@
         <el-row :gutter="20">
           <el-col :span="8">
             <el-image 
-              :src="selectedProduct.imageUrl" 
+              :src="getImageUrl(selectedProduct.imageUrl)" 
               style="width: 100%"
               fit="cover"
             />
@@ -144,6 +144,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi } from '@/api/admin'
+import { normalizeImageUrl } from '@/utils/image'
 
 const loading = ref(false)
 const productList = ref([])
@@ -162,6 +163,8 @@ const pagination = ref({
 
 const detailDialogVisible = ref(false)
 const selectedProduct = ref(null)
+
+const getImageUrl = (imageUrl) => normalizeImageUrl(imageUrl)
 
 const loadProducts = async () => {
   loading.value = true
@@ -184,19 +187,12 @@ const loadProducts = async () => {
 
 const loadCategories = async () => {
   try {
-    // 这里应该调用获取分类的API
-    // const response = await categoryApi.getCategories()
-    // categories.value = response.data
-    categories.value = [
-      { id: 1, name: '主食套餐' },
-      { id: 2, name: '面食类' },
-      { id: 3, name: '汤品类' },
-      { id: 4, name: '素食类' },
-      { id: 5, name: '荤菜类' },
-      { id: 6, name: '饮品类' }
-    ]
+    const response = await adminApi.getCategories()
+    categories.value = Array.isArray(response.data) ? response.data : []
   } catch (error) {
     console.error('加载分类失败:', error)
+    ElMessage.error('加载分类失败')
+    categories.value = []
   }
 }
 

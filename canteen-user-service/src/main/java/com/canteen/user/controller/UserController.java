@@ -71,9 +71,14 @@ public class UserController {
      */
     @GetMapping("/info")
     public Result<UserDTO.UserInfoResponse> getUserInfo(HttpServletRequest request) {
-        Long userId = getUserIdFromToken(request);
-        UserDTO.UserInfoResponse userInfo = userService.getUserInfo(userId);
-        return Result.success(userInfo);
+        try {
+            Long userId = getUserIdFromToken(request);
+            UserDTO.UserInfoResponse userInfo = userService.getUserInfo(userId);
+            return Result.success(userInfo);
+        } catch (Exception e) {
+            log.error("获取用户信息失败: {}", e.getMessage());
+            return Result.error("获取用户信息失败: " + e.getMessage());
+        }
     }
 
     /**

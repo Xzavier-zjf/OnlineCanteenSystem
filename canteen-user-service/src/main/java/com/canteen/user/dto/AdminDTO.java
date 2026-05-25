@@ -81,6 +81,19 @@ public class AdminDTO {
     }
 
     /**
+     * 推荐策略配置
+     */
+    @Data
+    public static class RecommendConfigResponse {
+        private String algorithm;
+        private Double salesWeight;
+        private Double ratingWeight;
+        private Double timeWeight;
+        private String updateFrequency;
+        private Integer maxRecommendCount;
+    }
+
+    /**
      * 系统统计数据响应
      */
     @Data

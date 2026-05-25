@@ -2,7 +2,7 @@ package com.canteen.user.service.impl;
 
 import com.canteen.user.dto.UserDTO;
 import com.canteen.user.entity.User;
-import com.canteen.user.mapper.UserMapper;
+import com.canteen.user.mapper.*;
 import com.canteen.user.service.UserService;
 import com.canteen.common.utils.JwtUtils;
 import org.junit.jupiter.api.Test;
@@ -21,12 +21,29 @@ public class UserServiceImplTest {
     @Mock
     private UserMapper userMapper;
     
+    @Mock
+    private UserNotificationSettingsMapper notificationSettingsMapper;
+    
+    @Mock
+    private UserPreferenceSettingsMapper preferenceSettingsMapper;
+    
+    @Mock
+    private UserLoginRecordMapper loginRecordMapper;
+    
+    @Mock
+    private SystemConfigMapper systemConfigMapper;
+    
+    @Mock
+    private MerchantSettingsMapper merchantSettingsMapper;
+    
     private UserService userService;
     
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        userService = new UserServiceImpl(userMapper);
+        userService = new UserServiceImpl(userMapper, notificationSettingsMapper, 
+                                        preferenceSettingsMapper, loginRecordMapper, 
+                                        systemConfigMapper, merchantSettingsMapper);
     }
     
     @Test

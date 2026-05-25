@@ -1,7 +1,7 @@
 import request from '@/api/request.js'
 
 export const adminApi = {
-  // 仪表板相�?
+  // 仪表板
   getDashboardStats() {
     return request({
       url: '/admin/dashboard',
@@ -111,6 +111,13 @@ export const adminApi = {
   },
 
   // 商品管理
+  getCategories() {
+    return request({
+      url: '/products/categories',
+      method: 'get'
+    })
+  },
+
   getAllProducts(params) {
     return request({
       url: '/products/admin/list',
@@ -151,6 +158,21 @@ export const adminApi = {
     })
   },
 
+  getRecommendConfig() {
+    return request({
+      url: '/admin/recommend-config',
+      method: 'get'
+    })
+  },
+
+  saveRecommendConfig(config) {
+    return request({
+      url: '/admin/recommend-config',
+      method: 'put',
+      data: config
+    })
+  },
+
   getHotProducts() {
     return request({
       url: '/admin/recommend/hot',
@@ -182,29 +204,14 @@ export const adminApi = {
       productCount: productCount.data || productCount,
       todaySales: todaySales.data || todaySales,
       totalSales: totalSales.data || totalSales
-    })).catch(error => {
-      console.error('获取系统统计数据失败:', error)
-      // 返回默认数据
-      return {
-        orderCount: 0,
-        productCount: 0,
-        todaySales: 0,
-        totalSales: 0
-      }
-    })
+    }))
   },
 
-  // 获取系统健康状�?- 返回模拟数据避免CORS问题
+  // 获取系统健康状态
   getSystemHealth() {
-    return Promise.resolve({
-      status: 'UP',
-      services: {
-        'user-service': { status: 'UP', port: 8081 },
-        'product-service': { status: 'UP', port: 8082 },
-        'order-service': { status: 'UP', port: 8083 },
-        'recommend-service': { status: 'UP', port: 8084 },
-        'gateway': { status: 'UP', port: 8080 }
-      }
+    return request({
+      url: '/health',
+      method: 'get'
     })
   },
 
@@ -213,110 +220,40 @@ export const adminApi = {
     return request({
       url: '/admin/recommend/hot/stats',
       method: 'get'
-    }).catch(() => {
-      // 返回默认数据
-      return {
-        data: [
-          { rank: 1, name: '红烧肉饭', sales: 156, revenue: 2340.00, id: 1, image: '/images/products/hongshaorou_rice.jpg', salesCount: 156, rating: 4.8, price: 15.00 },
-          { rank: 2, name: '宫保鸡丁', sales: 134, revenue: 2010.00, id: 2, image: '/images/products/gongbao_dish.jpg', salesCount: 134, rating: 4.6, price: 15.00 },
-          { rank: 3, name: '糖醋里脊', sales: 128, revenue: 1920.00, id: 3, image: '/images/products/tangcu_liji.jpg', salesCount: 128, rating: 4.7, price: 15.00 },
-          { rank: 4, name: '麻婆豆腐', sales: 98, revenue: 1470.00, id: 4, image: '/images/products/mapo_tofu.jpg', salesCount: 98, rating: 4.5, price: 15.00 },
-          { rank: 5, name: '回锅肉', sales: 87, revenue: 1305.00, id: 5, image: '/images/products/huiguorou_dish.jpg', salesCount: 87, rating: 4.4, price: 15.00 }
-        ]
-      }
     })
   },
 
-  // 获取商户销售排�?
+  // 获取商户销售排行
   getMerchantStats() {
     return request({
       url: '/admin/merchants/stats',
       method: 'get'
-    }).catch(() => {
-      // 返回默认数据
-      return {
-        data: [
-          { rank: 1, name: '第一食堂', orders: 245, revenue: 12250.00 },
-          { rank: 2, name: '第二食堂', orders: 198, revenue: 9900.00 },
-          { rank: 3, name: '清真餐厅', orders: 156, revenue: 7800.00 },
-          { rank: 4, name: '西餐厅', orders: 134, revenue: 6700.00 },
-          { rank: 5, name: '小吃街', orders: 98, revenue: 4900.00 }
-        ]
-      }
+    })
+  },
+
+  // 获取系统配置
+  getSystemConfig() {
+    return request({
+      url: '/admin/system-settings',
+      method: 'get'
     })
   },
 
   // 保存系统配置
   saveSystemConfig(config) {
     return request({
-      url: '/admin/system/config',
-      method: 'post',
+      url: '/admin/system-settings',
+      method: 'put',
       data: config
     })
   },
 
   // 获取系统日志
   getSystemLogs(params = {}) {
-    // 直接返回模拟数据，避免API调用错误
-    return Promise.resolve({
-      data: [
-        {
-          timestamp: new Date().toLocaleString('zh-CN'),
-          level: 'INFO',
-          module: '用户服务',
-          message: '用户登录成功',
-          user: 'admin1'
-        },
-        {
-          timestamp: new Date(Date.now() - 60000).toLocaleString('zh-CN'),
-          level: 'INFO',
-          module: '网关服务',
-          message: '服务启动完成',
-          user: 'system'
-        },
-        {
-          timestamp: new Date(Date.now() - 120000).toLocaleString('zh-CN'),
-          level: 'WARN',
-          module: '订单服务',
-          message: '订单处理延迟',
-          user: 'system'
-        }
-      ]
-    })
-    
-    /* 原始API调用代码，暂时注释 */
     return request({
-      url: '/admin/system/logs',
+      url: '/admin/system-logs',
       method: 'get',
       params
-    }).catch(() => {
-      // 返回默认数据
-      const now = new Date()
-      return {
-        data: [
-          {
-            timestamp: new Date(now - 5 * 60 * 1000).toLocaleString('zh-CN'),
-            level: 'INFO',
-            module: '用户服务',
-            message: '用户登录成功',
-            user: 'student001'
-          },
-          {
-            timestamp: new Date(now - 10 * 60 * 1000).toLocaleString('zh-CN'),
-            level: 'INFO',
-            module: '订单服务',
-            message: '新订单创建',
-            user: 'teacher002'
-          },
-          {
-            timestamp: new Date(now - 15 * 60 * 1000).toLocaleString('zh-CN'),
-            level: 'WARN',
-            module: '商品服务',
-            message: '商品库存低于阈值',
-            user: 'system'
-          }
-        ]
-      }
     })
   },
 

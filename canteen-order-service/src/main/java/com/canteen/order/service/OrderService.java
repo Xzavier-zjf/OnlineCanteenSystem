@@ -48,7 +48,27 @@ public interface OrderService {
     boolean cancelOrder(Long orderId);
 
     /**
+     * 退款订单
+     */
+    boolean refundOrder(Long orderId, String reason);
+
+    /**
      * 获取用户订单统计数据
      */
     OrderController.UserOrderStats getUserOrderStats(Long userId);
+
+    /**
+     * 根据状态获取订单数量
+     */
+    long getOrderCountByStatus(String status);
+
+    /**
+     * 获取今日营业额
+     */
+    java.math.BigDecimal getTodayRevenue();
+
+    /**
+     * 获取总订单数
+     */
+    long getTotalOrderCount();
 }

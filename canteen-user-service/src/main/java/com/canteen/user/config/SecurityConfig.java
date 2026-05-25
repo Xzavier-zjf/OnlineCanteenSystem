@@ -56,10 +56,12 @@ public class SecurityConfig {
                     new AntPathRequestMatcher("/api/users/register"),
                     new AntPathRequestMatcher("/api/users/login"),
                     new AntPathRequestMatcher("/api/users/health"),
-                    new AntPathRequestMatcher("/api/users/info"),
-                    new AntPathRequestMatcher("/api/users/stats"),
-                    new AntPathRequestMatcher("/api/users/**")
+                    new AntPathRequestMatcher("/api/merchant/login"),
+                    new AntPathRequestMatcher("/api/merchant/register"),
+                    new AntPathRequestMatcher("/uploads/**")
                 ).permitAll()
+                .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
+                .requestMatchers(new AntPathRequestMatcher("/api/merchant/**")).hasRole("MERCHANT")
                 // 其他接口需要认证
                 .anyRequest().authenticated()
             )

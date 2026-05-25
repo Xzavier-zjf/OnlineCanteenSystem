@@ -255,6 +255,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { productApi, recommendApi, orderApi } from '../api'
 import { Star, ShoppingCart, Plus, Delete, Search, Minus } from '@element-plus/icons-vue'
+import { normalizeImageUrl, setImageFallback } from '@/utils/image'
 
 export default {
   name: 'Products',
@@ -672,23 +673,11 @@ export default {
     
     // 图片处理方法
     const getImageUrl = (imageUrl) => {
-      if (!imageUrl) {
-        return '/images/products/placeholder.svg'
-      }
-      // 如果是相对路径，添加前缀
-      if (imageUrl.startsWith('/images/')) {
-        return imageUrl
-      }
-      // 如果是完整URL，直接返回
-      if (imageUrl.startsWith('http')) {
-        return imageUrl
-      }
-      // 其他情况，返回占位图
-      return '/images/products/placeholder.svg'
+      return normalizeImageUrl(imageUrl)
     }
     
     const handleImageError = (event) => {
-      event.target.src = '/images/products/placeholder.svg'
+      setImageFallback(event)
     }
     
     const getStockStatusType = (stock) => {

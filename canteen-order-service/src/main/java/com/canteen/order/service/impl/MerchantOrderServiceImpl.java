@@ -123,40 +123,22 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
     @Override
     public Map<String, Object> getMerchantOrderStats(Long merchantId, String startDate, String endDate) {
         try {
-            QueryWrapper<Order> wrapper = new QueryWrapper<>();
-            
-            // 时间范围筛选
-            if (StringUtils.hasText(startDate)) {
-                wrapper.ge("create_time", startDate + " 00:00:00");
-            }
-            if (StringUtils.hasText(endDate)) {
-                wrapper.le("create_time", endDate + " 23:59:59");
-            }
+            List<Order> merchantOrders = filterOrdersByDate(orderMapper.selectByMerchantId(merchantId), startDate, endDate);
 
             // 统计各状态订单数
             Map<String, Object> stats = new HashMap<>();
             
             // 总订单数
-            Long totalOrders = orderMapper.selectCount(wrapper);
-            stats.put("totalOrders", totalOrders);
+            stats.put("totalOrders", (long) merchantOrders.size());
 
             // 待处理订单
-            QueryWrapper<Order> pendingWrapper = (QueryWrapper<Order>) wrapper.clone();
-            pendingWrapper.eq("status", Order.Status.PAID.getCode());
-            Long pendingOrders = orderMapper.selectCount(pendingWrapper);
-            stats.put("pendingOrders", pendingOrders);
+            stats.put("pendingOrders", countByStatus(merchantOrders, Order.Status.PAID.getCode()));
 
             // 已完成订单
-            QueryWrapper<Order> completedWrapper = (QueryWrapper<Order>) wrapper.clone();
-            completedWrapper.eq("status", Order.Status.COMPLETED.getCode());
-            Long completedOrders = orderMapper.selectCount(completedWrapper);
-            stats.put("completedOrders", completedOrders);
+            stats.put("completedOrders", countByStatus(merchantOrders, Order.Status.COMPLETED.getCode()));
 
             // 已取消订单
-            QueryWrapper<Order> cancelledWrapper = (QueryWrapper<Order>) wrapper.clone();
-            cancelledWrapper.eq("status", Order.Status.CANCELLED.getCode());
-            Long cancelledOrders = orderMapper.selectCount(cancelledWrapper);
-            stats.put("cancelledOrders", cancelledOrders);
+            stats.put("cancelledOrders", countByStatus(merchantOrders, Order.Status.CANCELLED.getCode()));
 
             // 每日统计
             List<Map<String, Object>> dailyStats = getDailyStats(merchantId, startDate, endDate);
@@ -178,19 +160,10 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
     @Override
     public Map<String, Object> getMerchantFinanceStats(Long merchantId, String startDate, String endDate) {
         try {
-            QueryWrapper<Order> wrapper = new QueryWrapper<>();
-            wrapper.in("status", Order.Status.PAID.getCode(), Order.Status.PREPARING.getCode(), 
-                      Order.Status.READY.getCode(), Order.Status.COMPLETED.getCode());
-            
-            // 时间范围筛选
-            if (StringUtils.hasText(startDate)) {
-                wrapper.ge("create_time", startDate + " 00:00:00");
-            }
-            if (StringUtils.hasText(endDate)) {
-                wrapper.le("create_time", endDate + " 23:59:59");
-            }
-
-            List<Order> orders = orderMapper.selectList(wrapper);
+            List<Order> orders = filterOrdersByDate(orderMapper.selectByMerchantId(merchantId), startDate, endDate)
+                    .stream()
+                    .filter(this::isRevenueOrder)
+                    .collect(Collectors.toList());
             
             Map<String, Object> stats = new HashMap<>();
             
@@ -230,27 +203,28 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
         try {
             Page<Order> pageParam = new Page<>(page, size);
             QueryWrapper<Order> wrapper = new QueryWrapper<>();
+            List<Order> merchantOrders = orderMapper.selectByMerchantId(merchantId).stream()
+                    .filter(order -> !StringUtils.hasText(status) || status.equals(order.getStatus()))
+                    .sorted(Comparator.comparing(Order::getCreateTime, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                    .collect(Collectors.toList());
 
-            // 状态筛选
-            if (StringUtils.hasText(status)) {
-                wrapper.eq("status", status);
-            }
-
-            wrapper.orderByDesc("create_time");
-
-            Page<Order> orderPage = orderMapper.selectPage(pageParam, wrapper);
+            int fromIndex = Math.max(0, (page - 1) * size);
+            int toIndex = Math.min(fromIndex + size, merchantOrders.size());
+            List<Order> pageOrders = fromIndex >= merchantOrders.size()
+                    ? new ArrayList<>()
+                    : merchantOrders.subList(fromIndex, toIndex);
 
             // 构建返回结果
-            List<Map<String, Object>> orderList = orderPage.getRecords().stream()
+            List<Map<String, Object>> orderList = pageOrders.stream()
                     .map(this::convertOrderToMap)
                     .collect(Collectors.toList());
 
             Map<String, Object> result = new HashMap<>();
             result.put("records", orderList);
-            result.put("total", orderPage.getTotal());
+            result.put("total", (long) merchantOrders.size());
             result.put("page", page);
             result.put("size", size);
-            result.put("pages", orderPage.getPages());
+            result.put("pages", (long) Math.ceil((double) merchantOrders.size() / size));
 
             return result;
         } catch (Exception e) {
@@ -272,6 +246,9 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
             Order order = orderMapper.selectById(orderId);
             if (order == null) {
                 throw new RuntimeException("订单不存在");
+            }
+            if (!orderBelongsToMerchant(orderId, merchantId)) {
+                throw new RuntimeException("订单不存在或无权限操作");
             }
 
             if (!Order.Status.PAID.getCode().equals(order.getStatus())) {
@@ -297,6 +274,9 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
             if (order == null) {
                 throw new RuntimeException("订单不存在");
             }
+            if (!orderBelongsToMerchant(orderId, merchantId)) {
+                throw new RuntimeException("订单不存在或无权限操作");
+            }
 
             if (!Order.Status.PAID.getCode().equals(order.getStatus())) {
                 throw new RuntimeException("订单状态不正确，无法拒单");
@@ -316,11 +296,41 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
 
     @Override
     @Transactional
+    public void refundOrder(Long orderId, Long merchantId, String reason) {
+        try {
+            Order order = orderMapper.selectById(orderId);
+            if (order == null) {
+                throw new RuntimeException("订单不存在");
+            }
+            if (!orderBelongsToMerchant(orderId, merchantId)) {
+                throw new RuntimeException("订单不存在或无权限操作");
+            }
+            if (!canRefund(order.getStatus())) {
+                throw new RuntimeException("当前订单状态不支持退款");
+            }
+
+            order.setStatus(Order.Status.CANCELLED.getCode());
+            order.setRemark(appendReason(order.getRemark(), "退款原因", reason));
+            order.setUpdateTime(LocalDateTime.now());
+            orderMapper.updateById(order);
+
+            log.info("商户退款成功：merchantId={}, orderId={}, reason={}", merchantId, orderId, reason);
+        } catch (Exception e) {
+            log.error("商户退款失败：merchantId={}, orderId={}", merchantId, orderId, e);
+            throw new RuntimeException("退款失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
     public void updateOrderStatus(Long orderId, Long merchantId, String status) {
         try {
             Order order = orderMapper.selectById(orderId);
             if (order == null) {
                 throw new RuntimeException("订单不存在");
+            }
+            if (!orderBelongsToMerchant(orderId, merchantId)) {
+                throw new RuntimeException("订单不存在或无权限操作");
             }
 
             // 验证状态转换的合法性
@@ -346,6 +356,9 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
             if (order == null) {
                 throw new RuntimeException("订单不存在");
             }
+            if (!orderBelongsToMerchant(orderId, merchantId)) {
+                throw new RuntimeException("订单不存在或无权限操作");
+            }
 
             Map<String, Object> orderDetail = convertOrderToMap(order);
             return orderDetail;
@@ -369,12 +382,12 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
             LocalDateTime startOfDay = date.atStartOfDay();
             LocalDateTime endOfDay = date.atTime(23, 59, 59);
 
-            QueryWrapper<Order> wrapper = new QueryWrapper<>();
-            wrapper.in("status", Order.Status.PAID.getCode(), Order.Status.PREPARING.getCode(), 
-                      Order.Status.READY.getCode(), Order.Status.COMPLETED.getCode());
-            wrapper.between("create_time", startOfDay, endOfDay);
-
-            List<Order> dayOrders = orderMapper.selectList(wrapper);
+            List<Order> dayOrders = orderMapper.selectByMerchantId(merchantId).stream()
+                    .filter(this::isRevenueOrder)
+                    .filter(order -> order.getCreateTime() != null
+                            && !order.getCreateTime().isBefore(startOfDay)
+                            && !order.getCreateTime().isAfter(endOfDay))
+                    .collect(Collectors.toList());
             BigDecimal dayRevenue = dayOrders.stream()
                     .map(Order::getTotalAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -399,12 +412,14 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
             LocalDate monthStart = now.minusMonths(i).withDayOfMonth(1);
             LocalDate monthEnd = monthStart.plusMonths(1).minusDays(1);
 
-            QueryWrapper<Order> wrapper = new QueryWrapper<>();
-            wrapper.in("status", Order.Status.PAID.getCode(), Order.Status.PREPARING.getCode(), 
-                      Order.Status.READY.getCode(), Order.Status.COMPLETED.getCode());
-            wrapper.between("create_time", monthStart.atStartOfDay(), monthEnd.atTime(23, 59, 59));
-
-            List<Order> monthOrders = orderMapper.selectList(wrapper);
+            LocalDateTime startOfMonth = monthStart.atStartOfDay();
+            LocalDateTime endOfMonth = monthEnd.atTime(23, 59, 59);
+            List<Order> monthOrders = orderMapper.selectByMerchantId(merchantId).stream()
+                    .filter(this::isRevenueOrder)
+                    .filter(order -> order.getCreateTime() != null
+                            && !order.getCreateTime().isBefore(startOfMonth)
+                            && !order.getCreateTime().isAfter(endOfMonth))
+                    .collect(Collectors.toList());
             BigDecimal monthRevenue = monthOrders.stream()
                     .map(Order::getTotalAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -466,6 +481,52 @@ public class MerchantOrderServiceImpl implements MerchantOrderService {
 
         List<String> allowedStatuses = validTransitions.get(currentStatus);
         return allowedStatuses != null && allowedStatuses.contains(newStatus);
+    }
+
+    private boolean orderBelongsToMerchant(Long orderId, Long merchantId) {
+        return orderMapper.selectByMerchantId(merchantId).stream()
+                .anyMatch(order -> orderId.equals(order.getId()));
+    }
+
+    private List<Order> filterOrdersByDate(List<Order> orders, String startDate, String endDate) {
+        LocalDateTime start = StringUtils.hasText(startDate)
+                ? LocalDate.parse(startDate).atStartOfDay()
+                : null;
+        LocalDateTime end = StringUtils.hasText(endDate)
+                ? LocalDate.parse(endDate).atTime(23, 59, 59)
+                : null;
+
+        return orders.stream()
+                .filter(order -> start == null || (order.getCreateTime() != null && !order.getCreateTime().isBefore(start)))
+                .filter(order -> end == null || (order.getCreateTime() != null && !order.getCreateTime().isAfter(end)))
+                .collect(Collectors.toList());
+    }
+
+    private long countByStatus(List<Order> orders, String status) {
+        return orders.stream()
+                .filter(order -> status.equals(order.getStatus()))
+                .count();
+    }
+
+    private boolean isRevenueOrder(Order order) {
+        String status = order.getStatus();
+        return Order.Status.PAID.getCode().equals(status)
+                || Order.Status.PREPARING.getCode().equals(status)
+                || Order.Status.READY.getCode().equals(status)
+                || Order.Status.COMPLETED.getCode().equals(status);
+    }
+
+    private boolean canRefund(String status) {
+        return Order.Status.PAID.getCode().equals(status)
+                || Order.Status.PREPARING.getCode().equals(status)
+                || Order.Status.READY.getCode().equals(status)
+                || Order.Status.COMPLETED.getCode().equals(status);
+    }
+
+    private String appendReason(String remark, String label, String reason) {
+        String baseRemark = StringUtils.hasText(remark) ? remark : "";
+        String safeReason = StringUtils.hasText(reason) ? reason.trim() : "未填写";
+        return baseRemark + " [" + label + "：" + safeReason + "]";
     }
     
     @Override

@@ -296,6 +296,7 @@ import {
   ChatDotRound
 } from '@element-plus/icons-vue'
 import merchantApi from '@/api/merchant.js'
+import { normalizeImageUrl, setImageFallback } from '@/utils/image'
 
 export default {
   name: 'MerchantOrders',
@@ -330,7 +331,7 @@ export default {
     const stats = reactive({
       pendingCount: 0,
       todayCount: 0,
-      todayRevenue: '0.00'
+      todayRevenue: 0.00
     })
     
     // 计算属性
@@ -391,7 +392,10 @@ export default {
         // 调用merchant API获取订单数据
         const response = await merchantApi.getOrders(params)
         
-        if (response.data && Array.isArray(response.data.list)) {
+        if (response.data && Array.isArray(response.data.records)) {
+          orders.value = response.data.records
+          total.value = response.data.total || 0
+        } else if (response.data && Array.isArray(response.data.list)) {
           orders.value = response.data.list
           total.value = response.data.total || 0
         } else if (response.data && Array.isArray(response.data)) {
@@ -439,6 +443,13 @@ export default {
       if (!timeStr) return '未知时间'
       return new Date(timeStr).toLocaleString('zh-CN')
     }
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
     
     const getStatusType = (status) => {
       const statusMap = {
@@ -477,13 +488,11 @@ export default {
     }
     
     const getImageUrl = (imageUrl) => {
-      if (!imageUrl) return '/images/products/placeholder.svg'
-      if (imageUrl.startsWith('http')) return imageUrl
-      return imageUrl
+      return normalizeImageUrl(imageUrl)
     }
     
     const handleImageError = (event) => {
-      event.target.src = '/images/products/placeholder.svg'
+      setImageFallback(event)
     }
     
     // 订单操作
@@ -553,11 +562,83 @@ export default {
     }
     
     const printReceipt = (order) => {
-      ElMessage.info('打印功能开发中')
+      const items = Array.isArray(order.items) ? order.items : []
+      const rows = items.map(item => `
+        <tr>
+          <td>${escapeHtml(item.productName || item.name || '商品')}</td>
+          <td>${escapeHtml(item.quantity || 0)}</td>
+          <td>¥${escapeHtml(item.price || 0)}</td>
+          <td>¥${escapeHtml(((Number(item.price) || 0) * (Number(item.quantity) || 0)).toFixed(2))}</td>
+        </tr>
+      `).join('')
+
+      const printWindow = window.open('', '_blank', 'width=420,height=640')
+      if (!printWindow) {
+        ElMessage.error('浏览器阻止了打印窗口，请允许弹窗后重试')
+        return
+      }
+
+      printWindow.document.write(`
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>订单小票-${escapeHtml(order.orderNo)}</title>
+            <style>
+              body { font-family: Arial, "Microsoft YaHei", sans-serif; margin: 24px; color: #222; }
+              h2 { text-align: center; margin: 0 0 16px; }
+              .meta { font-size: 13px; line-height: 1.8; border-top: 1px dashed #999; border-bottom: 1px dashed #999; padding: 10px 0; }
+              table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+              th, td { text-align: left; padding: 8px 4px; border-bottom: 1px solid #eee; }
+              .total { margin-top: 16px; text-align: right; font-size: 18px; font-weight: 700; }
+              .footer { margin-top: 20px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+          </head>
+          <body>
+            <h2>食堂订单小票</h2>
+            <div class="meta">
+              <div>订单号：${escapeHtml(order.orderNo)}</div>
+              <div>下单时间：${escapeHtml(formatTime(order.createTime))}</div>
+              <div>订单状态：${escapeHtml(getStatusText(order.status))}</div>
+              <div>用户：${escapeHtml(order.userName || order.userId || '匿名用户')}</div>
+            </div>
+            <table>
+              <thead><tr><th>商品</th><th>数量</th><th>单价</th><th>小计</th></tr></thead>
+              <tbody>${rows || '<tr><td colspan="4">暂无商品明细</td></tr>'}</tbody>
+            </table>
+            <div class="total">合计：¥${escapeHtml(order.totalAmount || 0)}</div>
+            <div class="footer">请凭小票取餐</div>
+          </body>
+        </html>
+      `)
+      printWindow.document.close()
+      printWindow.focus()
+      printWindow.print()
     }
     
-    const refundOrder = (order) => {
-      ElMessage.info('退款功能开发中')
+    const refundOrder = async (order) => {
+      try {
+        const { value: reason } = await ElMessageBox.prompt(
+          `请输入订单 "${order.orderNo}" 的退款原因`,
+          '申请退款',
+          {
+            confirmButtonText: '确定退款',
+            cancelButtonText: '取消',
+            inputPlaceholder: '例如：客户申请取消、商品售罄等',
+            inputValue: '商户发起退款',
+            inputValidator: value => !!value?.trim() || '请填写退款原因',
+            type: 'warning'
+          }
+        )
+        await merchantApi.refundOrder(order.id, reason)
+        ElMessage.success('退款已提交，订单已关闭')
+        loadOrders()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('退款失败:', error)
+          ElMessage.error('退款失败')
+        }
+      }
     }
     
     // 导出订单

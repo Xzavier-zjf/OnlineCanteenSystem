@@ -63,10 +63,10 @@
               <el-switch v-model="systemConfig.maintenanceMode" />
             </el-form-item>
             <el-form-item label="用户注册">
-              <el-switch v-model="systemConfig.allowRegistration" />
+              <el-switch v-model="systemConfig.enableRegistration" />
             </el-form-item>
-            <el-form-item label="商户申请">
-              <el-switch v-model="systemConfig.allowMerchantApplication" />
+            <el-form-item label="邮箱验证">
+              <el-switch v-model="systemConfig.enableEmailVerification" />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="saveSystemConfig">保存配置</el-button>
@@ -159,10 +159,15 @@ const services = ref([
 
 const systemConfig = ref({
   systemName: '高校食堂订餐系统',
+  systemVersion: '1.0.0',
   systemDescription: '为高校师生提供便捷的在线订餐服务',
+  contactEmail: 'admin@canteen.com',
+  contactPhone: '400-123-4567',
   maintenanceMode: false,
-  allowRegistration: true,
-  allowMerchantApplication: true
+  maxUsers: 10000,
+  sessionTimeout: 30,
+  enableRegistration: true,
+  enableEmailVerification: false
 })
 
 const systemStats = ref({
@@ -210,7 +215,22 @@ const loadSystemStats = async () => {
     }
   } catch (error) {
     console.error('加载系统统计数据失败:', error)
-    ElMessage.warning('加载系统统计数据失败，显示默认数据')
+    ElMessage.error('加载系统统计数据失败')
+  }
+}
+
+const loadSystemConfig = async () => {
+  try {
+    const response = await adminApi.getSystemConfig()
+    if (response.data) {
+      systemConfig.value = {
+        ...systemConfig.value,
+        ...response.data
+      }
+    }
+  } catch (error) {
+    console.error('加载系统配置失败:', error)
+    ElMessage.error('加载系统配置失败')
   }
 }
 
@@ -226,13 +246,7 @@ const checkServiceStatus = async () => {
 
       if (serviceHealth) {
         service.status = serviceHealth.status === 'UP' ? 'running' : 'stopped'
-        const startTime = Date.now()
-        try {
-          // 避免直接访问actuator端点，使用模拟响应时间
-          service.responseTime = Math.floor(Math.random() * 50) + 10 // 10-60ms
-        } catch {
-          service.responseTime = 0
-        }
+        service.responseTime = serviceHealth.responseTime || 0
       } else {
         service.status = 'stopped'
         service.responseTime = 0
@@ -265,41 +279,24 @@ const getServiceKey = (serviceName) => {
 const loadSystemLogs = async () => {
   try {
     const response = await adminApi.getSystemLogs({ size: 10 })
-    systemLogs.value = response.data || []
+    const logs = response.data?.logs || response.data || []
+    systemLogs.value = Array.isArray(logs)
+      ? logs.map(log => ({
+        ...log,
+        timestamp: log.timestamp || log.createTime,
+        user: log.user || log.userId || 'system'
+      }))
+      : []
   } catch (error) {
     console.error('加载系统日志失败:', error)
-    // 使用默认数据作为后备
-    const now = new Date()
-    systemLogs.value = [
-      {
-        timestamp: new Date(now - 5 * 60 * 1000).toLocaleString('zh-CN'),
-        level: 'INFO',
-        module: '用户服务',
-        message: '用户登录成功',
-        user: 'student001'
-      },
-      {
-        timestamp: new Date(now - 10 * 60 * 1000).toLocaleString('zh-CN'),
-        level: 'INFO',
-        module: '订单服务',
-        message: '新订单创建',
-        user: 'teacher002'
-      },
-      {
-        timestamp: new Date(now - 15 * 60 * 1000).toLocaleString('zh-CN'),
-        level: 'WARN',
-        module: '商品服务',
-        message: '商品库存低于阈值',
-        user: 'system'
-      }
-    ]
+    ElMessage.error('加载系统日志失败')
+    systemLogs.value = []
   }
 }
 
 const saveSystemConfig = async () => {
   try {
-    // 这里应该调用保存配置的API
-    // await adminApi.saveSystemConfig(systemConfig.value)
+    await adminApi.saveSystemConfig(systemConfig.value)
     ElMessage.success('系统配置保存成功')
   } catch (error) {
     console.error('保存系统配置失败:', error)
@@ -308,14 +305,7 @@ const saveSystemConfig = async () => {
 }
 
 const resetSystemConfig = () => {
-  systemConfig.value = {
-    systemName: '高校食堂订餐系统',
-    systemDescription: '为高校师生提供便捷的在线订餐服务',
-    maintenanceMode: false,
-    allowRegistration: true,
-    allowMerchantApplication: true
-  }
-  ElMessage.info('配置已重置')
+  loadSystemConfig()
 }
 
 const refreshLogs = async () => {
@@ -339,6 +329,7 @@ onMounted(async () => {
   
   // 加载真实数据
   await Promise.all([
+    loadSystemConfig(),
     loadSystemStats(),
     checkServiceStatus(),
     loadSystemLogs()

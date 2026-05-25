@@ -27,7 +27,7 @@
                   <div class="recommend-product-item">
                     <div class="product-order">{{ index + 1 }}</div>
                     <el-image 
-                      :src="element.image" 
+                      :src="getProductImageUrl(element)" 
                       style="width: 80px; height: 80px; margin-right: 15px;"
                       fit="cover"
                     />
@@ -104,7 +104,7 @@
                 :class="{ 'in-recommend': isInRecommendList(product.id) }"
               >
                 <el-image 
-                  :src="product.image" 
+                  :src="getProductImageUrl(product)" 
                   style="width: 50px; height: 50px; margin-right: 12px;"
                   fit="cover"
                 />
@@ -258,6 +258,7 @@ import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api/admin.js'
 import draggable from 'vuedraggable'
 import * as echarts from 'echarts'
+import { normalizeImageUrl } from '@/utils/image'
 
 const recommendLoading = ref(false)
 const productsLoading = ref(false)
@@ -268,6 +269,8 @@ const filterCategory = ref('')
 const effectChart = ref(null)
 
 let effectChartInstance = null
+
+const getProductImageUrl = (product) => normalizeImageUrl(product?.imageUrl || product?.image)
 
 const recommendConfig = ref({
   algorithm: 'comprehensive',
@@ -336,6 +339,19 @@ const loadAllProducts = async () => {
     ElMessage.error('加载商品列表失败')
   } finally {
     productsLoading.value = false
+  }
+}
+
+const loadRecommendConfig = async () => {
+  try {
+    const response = await adminApi.getRecommendConfig()
+    recommendConfig.value = {
+      ...recommendConfig.value,
+      ...(response.data || {})
+    }
+  } catch (error) {
+    console.error('加载推荐策略配置失败:', error)
+    ElMessage.error('加载推荐策略配置失败')
   }
 }
 
@@ -414,12 +430,11 @@ const refreshRecommendProducts = async () => {
 
 const saveRecommendConfig = async () => {
   try {
-    // 这里应该调用保存推荐配置的API
-    // await adminApi.saveRecommendConfig(recommendConfig.value)
-    ElMessage.success('推荐策略配置保存成功')
+    await adminApi.saveRecommendConfig(recommendConfig.value)
+    ElMessage.success('推荐策略配置已保存')
   } catch (error) {
-    console.error('保存推荐配置失败:', error)
-    ElMessage.error('保存推荐配置失败')
+    console.error('保存推荐策略配置失败:', error)
+    ElMessage.error('保存推荐策略配置失败')
   }
 }
 
@@ -465,15 +480,10 @@ const initEffectChart = async () => {
       conversionRates = trendData.map(item => item.conversionRate)
     } catch (error) {
       console.error('获取效果数据失败:', error)
-      // 使用默认数据
-      const today = new Date()
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today)
-        date.setDate(date.getDate() - i)
-        dates.push(date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }))
-        clickRates.push(0)
-        conversionRates.push(0)
-      }
+      ElMessage.error('获取推荐效果数据失败')
+      dates = []
+      clickRates = []
+      conversionRates = []
     }
     
     const option = {
@@ -521,7 +531,8 @@ watch(filterCategory, () => {
 onMounted(async () => {
   await Promise.all([
     loadRecommendProducts(),
-    loadAllProducts()
+    loadAllProducts(),
+    loadRecommendConfig()
   ])
   
   await initEffectChart()

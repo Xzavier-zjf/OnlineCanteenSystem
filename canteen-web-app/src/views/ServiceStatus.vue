@@ -76,6 +76,7 @@ export default {
   setup() {
     const checking = ref(false)
     const testResults = ref([])
+    let logIdCounter = 0
     
     const testing = reactive({
       login: false,
@@ -124,7 +125,7 @@ export default {
     
     const addTestResult = (message, type = 'primary') => {
       testResults.value.unshift({
-        id: Date.now(),
+        id: `${Date.now()}-${logIdCounter++}`,
         message,
         type,
         timestamp: new Date().toLocaleTimeString()

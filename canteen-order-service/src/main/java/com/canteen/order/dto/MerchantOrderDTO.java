@@ -20,4 +20,15 @@ public class MerchantOrderDTO {
         @NotNull(message = "订单状态不能为空")
         private String status;
     }
+
+    /**
+     * 退款请求
+     */
+    @Data
+    public static class RefundRequest {
+        @NotNull(message = "商户ID不能为空")
+        private Long merchantId;
+
+        private String reason;
+    }
 }

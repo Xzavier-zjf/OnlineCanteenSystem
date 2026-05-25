@@ -102,6 +102,14 @@ public class ProductController {
     }
 
     /**
+     * 获取全局热门商品（用于商户仪表板）
+     */
+    @GetMapping("/top")
+    public List<Map<String, Object>> getTopProducts(@RequestParam(defaultValue = "5") Integer limit) {
+        return productService.getTopProductsForMerchant(limit);
+    }
+
+    /**
      * 健康检查
      */
     @GetMapping("/health")

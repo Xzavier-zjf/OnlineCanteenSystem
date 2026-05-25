@@ -45,13 +45,6 @@
                 </el-col>
               </el-row>
             </el-form-item>
-            <el-form-item label="店铺状态">
-              <el-switch 
-                v-model="shopInfo.isOpen" 
-                active-text="营业中" 
-                inactive-text="暂停营业"
-              />
-            </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="saveShopInfo" :loading="saving">
                 保存信息
@@ -77,7 +70,7 @@
               :before-upload="beforeLogoUpload"
               :headers="uploadHeaders"
             >
-              <img v-if="shopInfo.logoUrl" :src="shopInfo.logoUrl" class="logo" />
+              <img v-if="shopInfo.logoUrl" :src="normalizeImageUrl(shopInfo.logoUrl, '')" class="logo" />
               <el-icon v-else class="logo-uploader-icon"><Plus /></el-icon>
             </el-upload>
             <div class="logo-tips">
@@ -139,17 +132,14 @@
             <span>通知设置</span>
           </template>
           <el-form :model="notificationSettings" label-width="120px">
-            <el-form-item label="新订单通知">
-              <el-switch v-model="notificationSettings.newOrder" />
+            <el-form-item label="订单通知">
+              <el-switch v-model="notificationSettings.orderNotification" />
             </el-form-item>
-            <el-form-item label="订单状态变更">
-              <el-switch v-model="notificationSettings.orderStatus" />
-            </el-form-item>
-            <el-form-item label="库存预警">
-              <el-switch v-model="notificationSettings.stockAlert" />
+            <el-form-item label="促销通知">
+              <el-switch v-model="notificationSettings.promotionNotification" />
             </el-form-item>
             <el-form-item label="系统消息">
-              <el-switch v-model="notificationSettings.systemMessage" />
+              <el-switch v-model="notificationSettings.systemNotification" />
             </el-form-item>
             <el-form-item label="邮件通知">
               <el-switch v-model="notificationSettings.emailNotification" />
@@ -181,23 +171,6 @@
                   <el-switch v-model="businessSettings.autoAcceptOrder" />
                   <span class="setting-desc">开启后新订单将自动接受</span>
                 </el-form-item>
-                <el-form-item label="预计制作时间">
-                  <el-input-number 
-                    v-model="businessSettings.preparationTime" 
-                    :min="5" 
-                    :max="120" 
-                    :step="5"
-                  />
-                  <span class="setting-desc">分钟</span>
-                </el-form-item>
-                <el-form-item label="最大接单量">
-                  <el-input-number 
-                    v-model="businessSettings.maxOrdersPerHour" 
-                    :min="1" 
-                    :max="100"
-                  />
-                  <span class="setting-desc">每小时最多接单数量</span>
-                </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="起送金额">
@@ -211,14 +184,6 @@
                 <el-form-item label="配送费">
                   <el-input-number 
                     v-model="businessSettings.deliveryFee" 
-                    :min="0" 
-                    :precision="2"
-                  />
-                  <span class="setting-desc">元</span>
-                </el-form-item>
-                <el-form-item label="包装费">
-                  <el-input-number 
-                    v-model="businessSettings.packagingFee" 
                     :min="0" 
                     :precision="2"
                   />
@@ -244,6 +209,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import merchantApi from '@/api/merchant.js'
+import { normalizeImageUrl } from '@/utils/image'
 
 const shopFormRef = ref(null)
 const passwordFormRef = ref(null)
@@ -252,19 +218,18 @@ const changingPassword = ref(false)
 const savingNotification = ref(false)
 const savingBusiness = ref(false)
 
-const uploadAction = ref('/api/upload/logo')
+const uploadAction = ref('/api/upload/image')
 const uploadHeaders = ref({
   'Authorization': `Bearer ${localStorage.getItem('token')}`
 })
 
 const shopInfo = ref({
-  shopName: '美味小厨',
-  description: '提供新鲜美味的家常菜，用心做好每一道菜',
-  phone: '13800138000',
-  address: '学校食堂二楼A区',
+  shopName: '',
+  description: '',
+  phone: '',
+  address: '',
   openTime: '08:00',
   closeTime: '20:00',
-  isOpen: true,
   logoUrl: ''
 })
 
@@ -275,21 +240,17 @@ const passwordForm = ref({
 })
 
 const notificationSettings = ref({
-  newOrder: true,
-  orderStatus: true,
-  stockAlert: true,
-  systemMessage: true,
-  emailNotification: false,
-  smsNotification: true
+  emailNotification: true,
+  smsNotification: false,
+  orderNotification: true,
+  promotionNotification: true,
+  systemNotification: true
 })
 
 const businessSettings = ref({
   autoAcceptOrder: false,
-  preparationTime: 15,
-  maxOrdersPerHour: 30,
   minOrderAmount: 10.00,
-  deliveryFee: 2.00,
-  packagingFee: 1.00
+  deliveryFee: 2.00
 })
 
 const shopRules = {
@@ -329,15 +290,82 @@ const passwordRules = {
   ]
 }
 
+const parseBusinessHours = (businessHours) => {
+  if (!businessHours) {
+    return { openTime: '08:00', closeTime: '20:00' }
+  }
+
+  try {
+    const parsed = typeof businessHours === 'string'
+      ? JSON.parse(businessHours)
+      : businessHours
+    const monday = parsed?.monday || {}
+    return {
+      openTime: monday.open || '08:00',
+      closeTime: monday.close || '20:00'
+    }
+  } catch (error) {
+    console.warn('营业时间解析失败:', error)
+    return { openTime: '08:00', closeTime: '20:00' }
+  }
+}
+
+const buildBusinessHours = () => {
+  const hours = {
+    open: shopInfo.value.openTime || '08:00',
+    close: shopInfo.value.closeTime || '20:00'
+  }
+  return {
+    monday: hours,
+    tuesday: hours,
+    wednesday: hours,
+    thursday: hours,
+    friday: hours,
+    saturday: hours,
+    sunday: hours
+  }
+}
+
+const buildShopSettingsPayload = () => ({
+  shopName: shopInfo.value.shopName,
+  shopDescription: shopInfo.value.description,
+  contactPhone: shopInfo.value.phone,
+  shopAddress: shopInfo.value.address,
+  shopLogo: shopInfo.value.logoUrl,
+  businessHours: buildBusinessHours(),
+  autoAcceptOrder: businessSettings.value.autoAcceptOrder,
+  minOrderAmount: businessSettings.value.minOrderAmount,
+  deliveryFee: businessSettings.value.deliveryFee
+})
+
+const applyShopSettings = (data) => {
+  const hours = parseBusinessHours(data.businessHours)
+  shopInfo.value = {
+    ...shopInfo.value,
+    shopName: data.shopName || '',
+    description: data.shopDescription || '',
+    phone: data.contactPhone || '',
+    address: data.shopAddress || '',
+    logoUrl: data.shopLogo || '',
+    openTime: hours.openTime,
+    closeTime: hours.closeTime
+  }
+  businessSettings.value = {
+    autoAcceptOrder: Boolean(data.autoAcceptOrder),
+    minOrderAmount: Number(data.minOrderAmount ?? 0),
+    deliveryFee: Number(data.deliveryFee ?? 0)
+  }
+}
+
 const loadShopInfo = async () => {
   try {
-    const response = await merchantApi.getShopInfo()
+    const response = await merchantApi.getBusinessSettings()
     if (response.data) {
-      shopInfo.value = { ...shopInfo.value, ...response.data }
+      applyShopSettings(response.data)
     }
   } catch (error) {
     console.error('加载店铺信息失败:', error)
-    ElMessage.warning('加载店铺信息失败，使用默认数据')
+    ElMessage.error('加载店铺信息失败')
   }
 }
 
@@ -348,8 +376,7 @@ const saveShopInfo = async () => {
     await shopFormRef.value.validate()
     saving.value = true
     
-    // 这里应该调用API保存店铺信息
-    await merchantApi.updateShopInfo(shopInfo.value)
+    await merchantApi.updateBusinessSettings(buildShopSettingsPayload())
     
     ElMessage.success('店铺信息保存成功')
   } catch (error) {
@@ -364,8 +391,13 @@ const resetShopInfo = () => {
   loadShopInfo()
 }
 
-const handleLogoSuccess = (response, file) => {
-  shopInfo.value.logoUrl = URL.createObjectURL(file.raw)
+const handleLogoSuccess = (response) => {
+  const logoUrl = response?.data?.url
+  if (!logoUrl) {
+    ElMessage.error('Logo上传失败')
+    return
+  }
+  shopInfo.value.logoUrl = logoUrl
   ElMessage.success('Logo上传成功')
 }
 
@@ -417,7 +449,13 @@ const resetPasswordForm = () => {
 const saveNotificationSettings = async () => {
   savingNotification.value = true
   try {
-    await merchantApi.updateNotificationSettings(notificationSettings.value)
+    await merchantApi.updateNotificationSettings({
+      emailNotification: notificationSettings.value.emailNotification,
+      smsNotification: notificationSettings.value.smsNotification,
+      orderNotification: notificationSettings.value.orderNotification,
+      promotionNotification: notificationSettings.value.promotionNotification,
+      systemNotification: notificationSettings.value.systemNotification
+    })
     
     ElMessage.success('通知设置保存成功')
   } catch (error) {
@@ -431,7 +469,7 @@ const saveNotificationSettings = async () => {
 const saveBusinessSettings = async () => {
   savingBusiness.value = true
   try {
-    await merchantApi.updateBusinessSettings(businessSettings.value)
+    await merchantApi.updateBusinessSettings(buildShopSettingsPayload())
     
     ElMessage.success('营业设置保存成功')
   } catch (error) {
@@ -443,18 +481,25 @@ const saveBusinessSettings = async () => {
 }
 
 const resetBusinessSettings = () => {
-  businessSettings.value = {
-    autoAcceptOrder: false,
-    preparationTime: 15,
-    maxOrdersPerHour: 30,
-    minOrderAmount: 10.00,
-    deliveryFee: 2.00,
-    packagingFee: 1.00
-  }
+  loadShopInfo()
 }
 
 onMounted(() => {
   loadShopInfo()
+  merchantApi.getNotificationSettings().then(response => {
+    if (response.data) {
+      notificationSettings.value = {
+        emailNotification: Boolean(response.data.emailNotification),
+        smsNotification: Boolean(response.data.smsNotification),
+        orderNotification: Boolean(response.data.orderNotification),
+        promotionNotification: Boolean(response.data.promotionNotification),
+        systemNotification: Boolean(response.data.systemNotification)
+      }
+    }
+  }).catch(error => {
+    console.error('加载通知设置失败:', error)
+    ElMessage.error('加载通知设置失败')
+  })
 })
 </script>
 

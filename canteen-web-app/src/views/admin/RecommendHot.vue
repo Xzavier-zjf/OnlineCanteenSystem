@@ -24,7 +24,7 @@
                   <div class="hot-product-item">
                     <div class="product-rank">{{ index + 1 }}</div>
                     <el-image 
-                      :src="element.image" 
+                      :src="getProductImageUrl(element)" 
                       style="width: 60px; height: 60px; margin-right: 12px;"
                       fit="cover"
                     />
@@ -85,7 +85,7 @@
                 class="candidate-product-item"
               >
                 <el-image 
-                  :src="product.image" 
+                  :src="getProductImageUrl(product)" 
                   style="width: 50px; height: 50px; margin-right: 12px;"
                   fit="cover"
                 />
@@ -155,6 +155,7 @@ import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api/admin.js'
 import draggable from 'vuedraggable'
 import * as echarts from 'echarts'
+import { normalizeImageUrl } from '@/utils/image'
 
 const hotLoading = ref(false)
 const candidateLoading = ref(false)
@@ -164,6 +165,8 @@ const searchKeyword = ref('')
 const trendChart = ref(null)
 
 let trendChartInstance = null
+
+const getProductImageUrl = (product) => normalizeImageUrl(product?.imageUrl || product?.image)
 
 // 计算统计数据
 const totalSales = computed(() => {
@@ -315,14 +318,9 @@ const initTrendChart = async () => {
       salesData = trendData.map(item => item.sales)
     } catch (error) {
       console.error('获取趋势数据失败:', error)
-      // 使用默认数据
-      const today = new Date()
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today)
-        date.setDate(date.getDate() - i)
-        dates.push(date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }))
-        salesData.push(0)
-      }
+      ElMessage.error('获取热门商品趋势失败')
+      dates = []
+      salesData = []
     }
     
     const option = {

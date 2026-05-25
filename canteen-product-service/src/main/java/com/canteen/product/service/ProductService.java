@@ -191,4 +191,46 @@ public class ProductService {
             return new Page<>(current, size);
         }
     }
+
+    /**
+     * 获取商品总数
+     */
+    public long getTotalProductCount() {
+        try {
+            QueryWrapper<Product> wrapper = new QueryWrapper<>();
+            wrapper.eq("status", 1); // 只统计上架商品
+            return productMapper.selectCount(wrapper);
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    /**
+     * 获取全局热门商品（用于商户仪表板）
+     */
+    public List<Map<String, Object>> getTopProductsForMerchant(Integer limit) {
+        try {
+            QueryWrapper<Product> wrapper = new QueryWrapper<>();
+            wrapper.eq("status", 1);
+            wrapper.orderByDesc("sales");
+            wrapper.last("LIMIT " + limit);
+            
+            List<Product> products = productMapper.selectList(wrapper);
+            List<Map<String, Object>> result = new java.util.ArrayList<>();
+            
+            for (Product product : products) {
+                Map<String, Object> productMap = new HashMap<>();
+                productMap.put("id", product.getId());
+                productMap.put("name", product.getName());
+                productMap.put("price", product.getPrice());
+                productMap.put("sales", product.getSales());
+                productMap.put("revenue", product.getPrice().multiply(new java.math.BigDecimal(product.getSales())));
+                result.add(productMap);
+            }
+            
+            return result;
+        } catch (Exception e) {
+            return new java.util.ArrayList<>();
+        }
+    }
 }

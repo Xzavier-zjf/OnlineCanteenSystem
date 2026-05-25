@@ -30,6 +30,16 @@ public interface AdminService {
     boolean updateSystemSettings(Long userId, AdminDTO.UpdateSystemSettingsRequest request);
 
     /**
+     * 获取推荐策略配置
+     */
+    AdminDTO.RecommendConfigResponse getRecommendConfig(Long userId);
+
+    /**
+     * 更新推荐策略配置
+     */
+    boolean updateRecommendConfig(Long userId, AdminDTO.RecommendConfigResponse request);
+
+    /**
      * 获取系统统计数据
      * @param userId 用户ID
      * @return 系统统计数据

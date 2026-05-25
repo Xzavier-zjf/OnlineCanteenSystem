@@ -230,9 +230,9 @@
             :show-file-list="false"
             :on-success="handleImageSuccess"
             :before-upload="beforeImageUpload"
-            action="/api/upload/image"
+            :http-request="handleImageUpload"
           >
-            <img v-if="productForm.imageUrl" :src="productForm.imageUrl" class="image-preview" />
+            <img v-if="productForm.imageUrl" :src="getImageUrl(productForm.imageUrl)" class="image-preview" />
             <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
           </el-upload>
         </el-form-item>
@@ -287,6 +287,7 @@ import {
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import merchantApi from '@/api/merchant.js'
+import { normalizeImageUrl, setImageFallback } from '@/utils/image'
 
 export default {
   name: 'MerchantProducts',
@@ -355,14 +356,7 @@ export default {
       } catch (error) {
         console.error('加载分类失败:', error)
         ElMessage.error('加载分类失败')
-        // 设置默认分类
-        categories.value = [
-          { id: 1, name: '主食' },
-          { id: 2, name: '汤品' },
-          { id: 3, name: '小菜' },
-          { id: 4, name: '饮品' },
-          { id: 5, name: '甜品' }
-        ]
+        categories.value = []
       }
     }
     
@@ -388,8 +382,10 @@ export default {
         
         const response = await merchantApi.getProducts(params)
         
-        // 确保返回的数据是数组格式
-        if (response.data && Array.isArray(response.data.list)) {
+        if (response.data && Array.isArray(response.data.records)) {
+          products.value = response.data.records
+          total.value = response.data.total || 0
+        } else if (response.data && Array.isArray(response.data.list)) {
           products.value = response.data.list
           total.value = response.data.total || 0
         } else if (response.data && Array.isArray(response.data)) {
@@ -401,56 +397,10 @@ export default {
         }
         
       } catch (error) {
-        console.warn('商品列表API调用失败，使用模拟数据')
-        // 提供模拟数据，确保是数组格式
-        products.value = [
-          {
-            id: 1,
-            name: '红烧肉饭',
-            categoryName: '主食',
-            categoryId: 1,
-            price: 15.00,
-            stock: 50,
-            sales: 156,
-            rating: 4.8,
-            status: 1,
-            imageUrl: '/images/products/hongshaorou_rice.jpg',
-            isHot: true,
-            isNew: false,
-            description: '经典红烧肉配米饭'
-          },
-          {
-            id: 2,
-            name: '宫保鸡丁',
-            categoryName: '主食',
-            categoryId: 1,
-            price: 14.00,
-            stock: 30,
-            sales: 134,
-            rating: 4.6,
-            status: 1,
-            imageUrl: '/images/products/gongbao_dish.jpg',
-            isHot: false,
-            isNew: true,
-            description: '川菜经典宫保鸡丁'
-          },
-          {
-            id: 3,
-            name: '糖醋里脊',
-            categoryName: '主食',
-            categoryId: 1,
-            price: 16.00,
-            stock: 25,
-            sales: 98,
-            rating: 4.7,
-            status: 1,
-            imageUrl: '/images/products/tangcu_liji.jpg',
-            isHot: false,
-            isNew: false,
-            description: '酸甜可口的糖醋里脊'
-          }
-        ]
-        total.value = products.value.length
+        console.error('商品列表API调用失败:', error)
+        ElMessage.error('商品列表加载失败')
+        products.value = []
+        total.value = 0
       } finally {
         loading.value = false
       }
@@ -481,17 +431,18 @@ export default {
     
     // 图片处理
     const getImageUrl = (imageUrl) => {
-      if (!imageUrl) return '/images/products/placeholder.svg'
-      if (imageUrl.startsWith('http')) return imageUrl
-      return imageUrl
+      return normalizeImageUrl(imageUrl)
     }
     
     const handleImageError = (event) => {
-      event.target.src = '/images/products/placeholder.svg'
+      setImageFallback(event)
     }
     
     const handleImageSuccess = (response) => {
-      productForm.imageUrl = response.data.url
+      if (response && response.data && response.data.url) {
+        productForm.imageUrl = response.data.url
+        ElMessage.success('图片上传成功')
+      }
     }
     
     const beforeImageUpload = (file) => {
@@ -505,6 +456,23 @@ export default {
         ElMessage.error('上传图片大小不能超过 2MB!')
       }
       return isJPG && isLt2M
+    }
+    
+    const handleImageUpload = async (options) => {
+      try {
+        const response = await merchantApi.uploadImage(options.file)
+        if (response && response.data && response.data.url) {
+          productForm.imageUrl = response.data.url
+          ElMessage.success('图片上传成功')
+          options.onSuccess(response)
+        } else {
+          throw new Error('上传响应格式错误')
+        }
+      } catch (error) {
+        console.error('图片上传失败:', error)
+        ElMessage.error('图片上传失败: ' + (error.message || '未知错误'))
+        options.onError(error)
+      }
     }
     
     // 库存状态
@@ -533,7 +501,7 @@ export default {
           }
         )
         
-        // await merchantApi.deleteProduct(product.id)
+        await merchantApi.deleteProduct(product.id)
         ElMessage.success('删除成功')
         loadProducts()
       } catch (error) {
@@ -546,7 +514,7 @@ export default {
     
     const toggleProductStatus = async (product) => {
       try {
-        // await merchantApi.updateProductStatus(product.id, product.status)
+        await merchantApi.updateProductStatus(product.id, product.status)
         ElMessage.success(product.status ? '商品已上架' : '商品已下架')
       } catch (error) {
         console.error('更新状态失败:', error)
@@ -560,7 +528,7 @@ export default {
     const batchToggleStatus = async (status) => {
       try {
         const ids = selectedProducts.value.map(p => p.id)
-        // await merchantApi.batchUpdateStatus(ids, status)
+        await merchantApi.batchUpdateStatus(ids, status)
         ElMessage.success(`批量${status ? '上架' : '下架'}成功`)
         loadProducts()
       } catch (error) {
@@ -582,7 +550,7 @@ export default {
         )
         
         const ids = selectedProducts.value.map(p => p.id)
-        // await merchantApi.batchDelete(ids)
+        await merchantApi.batchDelete(ids)
         ElMessage.success('批量删除成功')
         loadProducts()
       } catch (error) {
@@ -600,10 +568,10 @@ export default {
         saving.value = true
         
         if (editingProduct.value) {
-          // await merchantApi.updateProduct(editingProduct.value.id, productForm)
+          await merchantApi.updateProduct(editingProduct.value.id, productForm)
           ElMessage.success('更新成功')
         } else {
-          // await merchantApi.createProduct(productForm)
+          await merchantApi.createProduct(productForm)
           ElMessage.success('添加成功')
         }
         
@@ -716,6 +684,7 @@ export default {
       handleImageError,
       handleImageSuccess,
       beforeImageUpload,
+      handleImageUpload,
       getStockType,
       editProduct,
       deleteProduct,

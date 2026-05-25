@@ -1,11 +1,13 @@
 package com.canteen.product.controller;
 
 import com.canteen.common.result.Result;
+import com.canteen.common.utils.AuthContext;
 import com.canteen.product.service.AdminProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 /**
@@ -24,7 +26,8 @@ public class AdminProductController {
      * 获取商品总数
      */
     @GetMapping("/count")
-    public Long getProductCount() {
+    public Long getProductCount(HttpServletRequest request) {
+        requireAdmin(request);
         return adminProductService.getTotalProductCount();
     }
 
@@ -32,7 +35,8 @@ public class AdminProductController {
      * 获取商户商品统计
      */
     @GetMapping("/merchant/{merchantId}/stats")
-    public Map<String, Object> getMerchantProductStats(@PathVariable Long merchantId) {
+    public Map<String, Object> getMerchantProductStats(HttpServletRequest request, @PathVariable Long merchantId) {
+        requireAdmin(request);
         return adminProductService.getMerchantProductStats(merchantId);
     }
 
@@ -41,11 +45,13 @@ public class AdminProductController {
      */
     @GetMapping("/admin/list")
     public Result<Map<String, Object>> getAdminProductList(
+            HttpServletRequest request,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer status) {
         try {
+            requireAdmin(request);
             Map<String, Object> result = adminProductService.getAdminProductList(page, size, keyword, status);
             return Result.success("获取商品列表成功", result);
         } catch (Exception e) {
@@ -58,10 +64,12 @@ public class AdminProductController {
      * 审核商品
      */
     @PutMapping("/{productId}/audit")
-    public Result<String> auditProduct(@PathVariable Long productId, 
-                                     @RequestParam Boolean approved,
-                                     @RequestParam(required = false) String reason) {
+    public Result<String> auditProduct(HttpServletRequest request,
+                                      @PathVariable Long productId,
+                                      @RequestParam Boolean approved,
+                                      @RequestParam(required = false) String reason) {
         try {
+            requireAdmin(request);
             adminProductService.auditProduct(productId, approved, reason);
             return Result.success("商品审核完成");
         } catch (Exception e) {
@@ -74,9 +82,11 @@ public class AdminProductController {
      * 删除违规商品
      */
     @DeleteMapping("/{productId}")
-    public Result<String> deleteProduct(@PathVariable Long productId, 
-                                      @RequestParam(required = false) String reason) {
+    public Result<String> deleteProduct(HttpServletRequest request,
+                                       @PathVariable Long productId,
+                                       @RequestParam(required = false) String reason) {
         try {
+            requireAdmin(request);
             adminProductService.deleteProduct(productId, reason);
             return Result.success("商品删除成功");
         } catch (Exception e) {
@@ -89,14 +99,20 @@ public class AdminProductController {
      * 设置推荐商品
      */
     @PutMapping("/{productId}/recommend")
-    public Result<String> setRecommendProduct(@PathVariable Long productId, 
-                                            @RequestParam Boolean isRecommend) {
+    public Result<String> setRecommendProduct(HttpServletRequest request,
+                                             @PathVariable Long productId,
+                                             @RequestParam Boolean isRecommend) {
         try {
+            requireAdmin(request);
             adminProductService.setRecommendProduct(productId, isRecommend);
             return Result.success("推荐设置成功");
         } catch (Exception e) {
             log.error("设置推荐商品失败", e);
             return Result.error("设置推荐商品失败：" + e.getMessage());
         }
+    }
+
+    private void requireAdmin(HttpServletRequest request) {
+        AuthContext.from(request).requireRole("ADMIN");
     }
 }

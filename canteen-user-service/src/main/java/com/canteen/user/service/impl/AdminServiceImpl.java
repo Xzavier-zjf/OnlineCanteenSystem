@@ -1,8 +1,11 @@
 package com.canteen.user.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.canteen.common.exception.BusinessException;
 import com.canteen.user.dto.AdminDTO;
+import com.canteen.user.entity.SystemConfig;
 import com.canteen.user.entity.User;
+import com.canteen.user.mapper.SystemConfigMapper;
 import com.canteen.user.mapper.UserMapper;
 import com.canteen.user.service.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,7 @@ import java.util.UUID;
 public class AdminServiceImpl implements AdminService {
 
     private final UserMapper userMapper;
+    private final SystemConfigMapper systemConfigMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${canteen.order-service.url:http://localhost:8082}")
@@ -141,16 +145,18 @@ public class AdminServiceImpl implements AdminService {
         validateAdminPermission(userId);
 
         AdminDTO.SystemSettingsResponse response = new AdminDTO.SystemSettingsResponse();
-        response.setSystemName("在线食堂管理系统");
-        response.setSystemVersion("1.0.0");
-        response.setSystemDescription("基于Spring Boot的在线食堂订餐管理系统");
-        response.setContactEmail("admin@canteen.com");
-        response.setContactPhone("400-123-4567");
-        response.setMaintenanceMode(false);
-        response.setMaxUsers(10000);
-        response.setSessionTimeout(30);
-        response.setEnableRegistration(true);
-        response.setEnableEmailVerification(false);
+        
+        // 从数据库获取系统配置
+        response.setSystemName(getConfigValue("system.name", "在线食堂管理系统"));
+        response.setSystemVersion(getConfigValue("system.version", "1.0.0"));
+        response.setSystemDescription(getConfigValue("system.description", "基于Spring Boot的在线食堂订餐管理系统"));
+        response.setContactEmail(getConfigValue("system.contact.email", "admin@canteen.com"));
+        response.setContactPhone(getConfigValue("system.contact.phone", "400-123-4567"));
+        response.setMaintenanceMode(Boolean.parseBoolean(getConfigValue("system.maintenance.mode", "false")));
+        response.setMaxUsers(Integer.parseInt(getConfigValue("system.max.users", "10000")));
+        response.setSessionTimeout(Integer.parseInt(getConfigValue("system.session.timeout", "30")));
+        response.setEnableRegistration(Boolean.parseBoolean(getConfigValue("system.enable.registration", "true")));
+        response.setEnableEmailVerification(Boolean.parseBoolean(getConfigValue("system.enable.email.verification", "false")));
 
         return response;
     }
@@ -160,9 +166,59 @@ public class AdminServiceImpl implements AdminService {
         // 验证管理员权限
         validateAdminPermission(userId);
 
-        // 这里可以将设置保存到数据库或配置文件
-        log.info("管理员{}更新系统设置: {}", userId, request);
-        return true;
+        try {
+            // 更新系统配置到数据库
+            updateConfigValue("system.name", request.getSystemName());
+            updateConfigValue("system.version", request.getSystemVersion());
+            updateConfigValue("system.description", request.getSystemDescription());
+            updateConfigValue("system.contact.email", request.getContactEmail());
+            updateConfigValue("system.contact.phone", request.getContactPhone());
+            updateConfigValue("system.maintenance.mode", String.valueOf(request.getMaintenanceMode()));
+            updateConfigValue("system.max.users", String.valueOf(request.getMaxUsers()));
+            updateConfigValue("system.session.timeout", String.valueOf(request.getSessionTimeout()));
+            updateConfigValue("system.enable.registration", String.valueOf(request.getEnableRegistration()));
+            updateConfigValue("system.enable.email.verification", String.valueOf(request.getEnableEmailVerification()));
+            
+            log.info("管理员{}更新系统设置成功", userId);
+            return true;
+        } catch (Exception e) {
+            log.error("更新系统设置失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    @Override
+    public AdminDTO.RecommendConfigResponse getRecommendConfig(Long userId) {
+        validateAdminPermission(userId);
+
+        AdminDTO.RecommendConfigResponse response = new AdminDTO.RecommendConfigResponse();
+        response.setAlgorithm(getConfigValue("recommend.algorithm", "comprehensive"));
+        response.setSalesWeight(parseDoubleConfig("recommend.sales.weight", 0.4));
+        response.setRatingWeight(parseDoubleConfig("recommend.rating.weight", 0.3));
+        response.setTimeWeight(parseDoubleConfig("recommend.time.weight", 0.3));
+        response.setUpdateFrequency(getConfigValue("recommend.update.frequency", "daily"));
+        response.setMaxRecommendCount(parseIntegerConfig("recommend.max.count", 20));
+        return response;
+    }
+
+    @Override
+    public boolean updateRecommendConfig(Long userId, AdminDTO.RecommendConfigResponse request) {
+        validateAdminPermission(userId);
+
+        try {
+            updateConfigValue("recommend.algorithm", request.getAlgorithm());
+            updateConfigValue("recommend.sales.weight", String.valueOf(request.getSalesWeight()));
+            updateConfigValue("recommend.rating.weight", String.valueOf(request.getRatingWeight()));
+            updateConfigValue("recommend.time.weight", String.valueOf(request.getTimeWeight()));
+            updateConfigValue("recommend.update.frequency", request.getUpdateFrequency());
+            updateConfigValue("recommend.max.count", String.valueOf(request.getMaxRecommendCount()));
+
+            log.info("管理员{}更新推荐策略配置成功", userId);
+            return true;
+        } catch (Exception e) {
+            log.error("更新推荐策略配置失败: {}", e.getMessage(), e);
+            return false;
+        }
     }
 
     @Override
@@ -311,6 +367,68 @@ public class AdminServiceImpl implements AdminService {
         }
         if (!"ADMIN".equals(user.getRole())) {
             throw new BusinessException("权限不足，需要管理员权限");
+        }
+    }
+    
+    /**
+     * 获取配置值
+     */
+    private String getConfigValue(String configKey, String defaultValue) {
+        try {
+            QueryWrapper<SystemConfig> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("config_key", configKey);
+            SystemConfig config = systemConfigMapper.selectOne(queryWrapper);
+            return config != null ? config.getConfigValue() : defaultValue;
+        } catch (Exception e) {
+            log.warn("获取配置{}失败: {}", configKey, e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    private Double parseDoubleConfig(String configKey, Double defaultValue) {
+        try {
+            return Double.parseDouble(getConfigValue(configKey, String.valueOf(defaultValue)));
+        } catch (Exception e) {
+            log.warn("解析数值配置{}失败: {}", configKey, e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    private Integer parseIntegerConfig(String configKey, Integer defaultValue) {
+        try {
+            return Integer.parseInt(getConfigValue(configKey, String.valueOf(defaultValue)));
+        } catch (Exception e) {
+            log.warn("解析整数配置{}失败: {}", configKey, e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 更新配置值
+     */
+    private void updateConfigValue(String configKey, String configValue) {
+        try {
+            QueryWrapper<SystemConfig> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("config_key", configKey);
+            SystemConfig config = systemConfigMapper.selectOne(queryWrapper);
+            
+            if (config != null) {
+                // 更新现有配置
+                config.setConfigValue(configValue);
+                config.setUpdateTime(LocalDateTime.now());
+                systemConfigMapper.updateById(config);
+            } else {
+                // 创建新配置
+                config = new SystemConfig();
+                config.setConfigKey(configKey);
+                config.setConfigValue(configValue);
+                config.setConfigType("STRING");
+                config.setIsPublic(false);
+                systemConfigMapper.insert(config);
+            }
+        } catch (Exception e) {
+            log.error("更新配置{}失败: {}", configKey, e.getMessage());
+            throw new BusinessException("更新系统配置失败");
         }
     }
 }

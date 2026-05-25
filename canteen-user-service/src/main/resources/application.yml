@@ -20,6 +20,14 @@ spring:
     username: root
     password: 123456
 
+  # 文件上传配置
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+      file-size-threshold: 0
+
   # Security配置
   # security:
   #   user:
@@ -53,6 +61,12 @@ logging:
     org.springframework.security: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# 文件上传配置
+file:
+  upload:
+    path: ./uploads
+    url-prefix: http://localhost:8081
 
 # 系统配置
 canteen:

@@ -197,6 +197,7 @@ export default {
     const pageSize = ref(5)
     const cancelingId = ref(null)
     const payingId = ref(null)
+    const reorderingId = ref(null)
     
     const getUserInfo = () => {
       const userInfoStr = localStorage.getItem('userInfo')
@@ -461,9 +462,43 @@ export default {
       }
     }
     
-    const reorder = (order) => {
-      ElMessage.info('功能开发中，敬请期待')
-      // TODO: 实现再来一单功能
+    const buildReorderItems = (items = []) => items
+      .filter(item => item.productId && item.quantity && item.price)
+      .map(item => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        price: item.price
+      }))
+
+    const reorder = async (order) => {
+      try {
+        reorderingId.value = order.id
+        const response = await orderApi.getOrderDetail(order.id)
+        const detail = response.data || {}
+        const items = buildReorderItems(detail.items || detail.order?.items || order.items || [])
+        if (!items.length) {
+          ElMessage.warning('该订单没有可复购的商品明细')
+          return
+        }
+
+        const createResponse = await orderApi.createOrder({
+          items,
+          remark: `再来一单，来源订单：${order.orderNo || order.id}`
+        })
+        const newOrder = createResponse.data || createResponse
+        ElMessage.success('已生成新的待支付订单')
+        if (newOrder?.id) {
+          router.push(`/order/${newOrder.id}`)
+        } else {
+          loadOrders()
+        }
+      } catch (error) {
+        console.error('再来一单失败:', error)
+        ElMessage.error('再来一单失败: ' + (error.message || '请重试'))
+      } finally {
+        reorderingId.value = null
+      }
     }
     
     const exportOrders = () => {
@@ -554,7 +589,9 @@ export default {
       handleSizeChange,
       handleCurrentChange,
       cancelingId,
-      payingId
+      payingId,
+      reorderingId,
+      loadOrders
     }
   }
 }

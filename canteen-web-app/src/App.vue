@@ -155,6 +155,9 @@
         </div>
       </el-footer>
     </el-container>
+    
+    <!-- 主题切换按钮 -->
+    <ThemeToggle />
   </div>
 </template>
 
@@ -166,12 +169,14 @@ import {
   Shop, User, ArrowDown, Food, DataAnalysis, Goods, List, 
   Setting, DataBoard, Money, SwitchButton 
 } from '@element-plus/icons-vue'
+import ThemeToggle from './components/ThemeToggle.vue'
 
 export default {
   name: 'App',
   components: {
     Shop, User, ArrowDown, Food, DataAnalysis, Goods, 
-    List, Setting, DataBoard, Money, SwitchButton
+    List, Setting, DataBoard, Money, SwitchButton,
+    ThemeToggle
   },
   setup() {
     const router = useRouter()

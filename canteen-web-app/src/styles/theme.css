@@ -1,0 +1,388 @@
+/* 主题样式 */
+
+/* 浅色主题 */
+:root,
+.light {
+  --theme-bg-primary: #ffffff;
+  --theme-bg-secondary: #f5f7fa;
+  --theme-bg-tertiary: #ebeef5;
+  --theme-text-primary: #303133;
+  --theme-text-secondary: #606266;
+  --theme-text-tertiary: #909399;
+  --theme-border-primary: #dcdfe6;
+  --theme-border-secondary: #e4e7ed;
+  --theme-shadow: rgba(0, 0, 0, 0.1);
+  --theme-primary: #409eff;
+  --theme-success: #67c23a;
+  --theme-warning: #e6a23c;
+  --theme-danger: #f56c6c;
+  --theme-info: #909399;
+}
+
+/* 深色主题 */
+.dark {
+  --theme-bg-primary: #141414;
+  --theme-bg-secondary: #1f1f1f;
+  --theme-bg-tertiary: #2a2a2a;
+  --theme-text-primary: #ffffff;
+  --theme-text-secondary: #e0e0e0;
+  --theme-text-tertiary: #b0b0b0;
+  --theme-border-primary: #3a3a3a;
+  --theme-border-secondary: #2a2a2a;
+  --theme-shadow: rgba(0, 0, 0, 0.5);
+  --theme-primary: #409eff;
+  --theme-success: #67c23a;
+  --theme-warning: #e6a23c;
+  --theme-danger: #f56c6c;
+  --theme-info: #909399;
+}
+
+/* 全局样式 */
+body {
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Element Plus 组件深色模式适配 */
+.dark .el-card {
+  background-color: var(--theme-bg-secondary);
+  border-color: var(--theme-border-primary);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dark .el-card__header {
+  background-color: var(--theme-bg-tertiary);
+  border-bottom-color: var(--theme-border-primary);
+  color: var(--theme-text-primary);
+}
+
+.dark .el-input__wrapper {
+  background-color: var(--theme-bg-tertiary);
+  border-color: var(--theme-border-primary);
+  color: var(--theme-text-primary);
+}
+
+.dark .el-input__wrapper:hover {
+  border-color: var(--theme-primary);
+}
+
+.dark .el-input__wrapper.is-focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 1px var(--theme-primary) inset;
+}
+
+.dark .el-input__inner {
+  color: var(--theme-text-primary);
+  background-color: transparent;
+}
+
+.dark .el-textarea__inner {
+  background-color: var(--theme-bg-tertiary);
+  border-color: var(--theme-border-primary);
+  color: var(--theme-text-primary);
+}
+
+.dark .el-textarea__inner:hover {
+  border-color: var(--theme-primary);
+}
+
+.dark .el-textarea__inner:focus {
+  border-color: var(--theme-primary);
+}
+
+.dark .el-select .el-input__wrapper {
+  background-color: var(--theme-bg-tertiary);
+}
+
+.dark .el-select-dropdown {
+  background-color: var(--theme-bg-secondary);
+  border-color: var(--theme-border-primary);
+}
+
+.dark .el-select-dropdown__item {
+  color: var(--theme-text-primary);
+}
+
+.dark .el-select-dropdown__item:hover {
+  background-color: var(--theme-bg-tertiary);
+}
+
+.dark .el-select-dropdown__item.selected {
+  background-color: var(--theme-primary);
+  color: #ffffff;
+}
+
+.dark .el-button {
+  background-color: var(--theme-bg-tertiary);
+  border-color: var(--theme-border-primary);
+  color: var(--theme-text-primary);
+}
+
+.dark .el-button:hover {
+  background-color: var(--theme-bg-secondary);
+  border-color: var(--theme-primary);
+}
+
+.dark .el-button--primary {
+  background-color: var(--theme-primary);
+  border-color: var(--theme-primary);
+  color: #ffffff;
+}
+
+.dark .el-button--primary:hover {
+  background-color: #66b1ff;
+  border-color: #66b1ff;
+}
+
+.dark .el-button--warning {
+  background-color: var(--theme-warning);
+  border-color: var(--theme-warning);
+  color: #ffffff;
+}
+
+.dark .el-button--danger {
+  background-color: var(--theme-danger);
+  border-color: var(--theme-danger);
+  color: #ffffff;
+}
+
+.dark .el-tabs__header {
+  background-color: var(--theme-bg-secondary);
+}
+
+.dark .el-tabs__nav-wrap::after {
+  background-color: var(--theme-border-primary);
+}
+
+.dark .el-tabs__item {
+  color: var(--theme-text-secondary);
+  border-color: transparent;
+}
+
+.dark .el-tabs__item:hover {
+  color: var(--theme-text-primary);
+}
+
+.dark .el-tabs__item.is-active {
+  color: var(--theme-primary);
+  border-bottom-color: var(--theme-primary);
+}
+
+.dark .el-tabs__content {
+  background-color: var(--theme-bg-primary);
+}
+
+.dark .el-form-item__label {
+  color: var(--theme-text-primary);
+}
+
+.dark .el-radio {
+  color: var(--theme-text-primary);
+}
+
+.dark .el-radio__label {
+  color: var(--theme-text-primary);
+}
+
+.dark .el-radio__input.is-checked .el-radio__inner {
+  background-color: var(--theme-primary);
+  border-color: var(--theme-primary);
+}
+
+.dark .el-radio__inner {
+  background-color: var(--theme-bg-tertiary);
+  border-color: var(--theme-border-primary);
+}
+
+.dark .el-switch__core {
+  background-color: var(--theme-bg-tertiary);
+  border-color: var(--theme-border-primary);
+}
+
+.dark .el-switch.is-checked .el-switch__core {
+  background-color: var(--theme-primary);
+}
+
+.dark .el-input-number {
+  background-color: var(--theme-bg-tertiary);
+}
+
+.dark .el-input-number .el-input__wrapper {
+  background-color: var(--theme-bg-tertiary);
+}
+
+.dark .el-input-number__decrease,
+.dark .el-input-number__increase {
+  background-color: var(--theme-bg-tertiary);
+  border-color: var(--theme-border-primary);
+  color: var(--theme-text-primary);
+}
+
+.dark .el-input-number__decrease:hover,
+.dark .el-input-number__increase:hover {
+  background-color: var(--theme-bg-secondary);
+  color: var(--theme-primary);
+}
+
+.dark .el-table {
+  background-color: var(--theme-bg-secondary);
+  color: var(--theme-text-primary);
+}
+
+.dark .el-table th.el-table__cell {
+  background-color: var(--theme-bg-tertiary);
+  color: var(--theme-text-primary);
+  border-bottom-color: var(--theme-border-primary);
+}
+
+.dark .el-table td.el-table__cell {
+  border-bottom-color: var(--theme-border-primary);
+}
+
+.dark .el-table tr {
+  background-color: var(--theme-bg-secondary);
+}
+
+.dark .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background-color: var(--theme-bg-tertiary);
+}
+
+.dark .el-table__empty-text {
+  color: var(--theme-text-secondary);
+}
+
+.dark .el-pagination {
+  color: var(--theme-text-primary);
+}
+
+.dark .el-pagination .el-pager li {
+  background-color: var(--theme-bg-tertiary);
+  color: var(--theme-text-primary);
+  border-color: var(--theme-border-primary);
+}
+
+.dark .el-pagination .el-pager li:hover {
+  color: var(--theme-primary);
+}
+
+.dark .el-pagination .el-pager li.is-active {
+  background-color: var(--theme-primary);
+  color: #ffffff;
+}
+
+.dark .el-pagination button {
+  background-color: var(--theme-bg-tertiary);
+  color: var(--theme-text-primary);
+  border-color: var(--theme-border-primary);
+}
+
+.dark .el-pagination button:hover {
+  color: var(--theme-primary);
+}
+
+.dark .el-message-box {
+  background-color: var(--theme-bg-secondary);
+  border-color: var(--theme-border-primary);
+}
+
+.dark .el-message-box__title {
+  color: var(--theme-text-primary);
+}
+
+.dark .el-message-box__content {
+  color: var(--theme-text-secondary);
+}
+
+.dark .el-overlay-message-box {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.dark .el-upload {
+  border-color: var(--theme-border-primary);
+}
+
+.dark .el-upload:hover {
+  border-color: var(--theme-primary);
+}
+
+.dark .el-upload-dragger {
+  background-color: var(--theme-bg-tertiary);
+  border-color: var(--theme-border-primary);
+}
+
+.dark .el-upload-dragger:hover {
+  border-color: var(--theme-primary);
+}
+
+.dark .el-tag {
+  background-color: var(--theme-bg-tertiary);
+  border-color: var(--theme-border-primary);
+  color: var(--theme-text-primary);
+}
+
+.dark .el-tag--success {
+  background-color: rgba(103, 194, 58, 0.2);
+  border-color: var(--theme-success);
+  color: var(--theme-success);
+}
+
+.dark .el-tag--warning {
+  background-color: rgba(230, 162, 60, 0.2);
+  border-color: var(--theme-warning);
+  color: var(--theme-warning);
+}
+
+.dark .el-tag--danger {
+  background-color: rgba(245, 108, 108, 0.2);
+  border-color: var(--theme-danger);
+  color: var(--theme-danger);
+}
+
+.dark .el-tag--info {
+  background-color: rgba(144, 147, 153, 0.2);
+  border-color: var(--theme-info);
+  color: var(--theme-info);
+}
+
+/* 主题切换动画 */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* 主题切换按钮样式 */
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-primary);
+  color: var(--theme-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px var(--theme-shadow);
+}
+
+.theme-toggle:hover {
+  background-color: var(--theme-bg-tertiary);
+  transform: scale(1.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .theme-toggle {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+}

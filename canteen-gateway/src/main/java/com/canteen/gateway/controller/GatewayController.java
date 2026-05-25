@@ -1,11 +1,15 @@
 package com.canteen.gateway.controller;
 
-import com.canteen.common.utils.JwtUtils;
-import lombok.RequiredArgsConstructor;
+import com.canteen.common.utils.AuthContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.core.io.ByteArrayResource;
 
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -20,6 +24,14 @@ import org.springframework.web.bind.annotation.RequestMethod;
 public class GatewayController {
 
     private final RestTemplate restTemplate = new RestTemplate();
+
+    /**
+     * 文件上传专用代理
+     */
+    @PostMapping("/upload/**")
+    public ResponseEntity<String> proxyFileUpload(HttpServletRequest request) {
+        return proxyFileUploadRequest("http://localhost:8081", request);
+    }
 
     /**
      * 用户服务代理 - 包括管理员API
@@ -54,6 +66,77 @@ public class GatewayController {
     }
 
     /**
+     * 文件上传代理方法
+     */
+    private ResponseEntity<String> proxyFileUploadRequest(String serviceUrl, HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String token = request.getHeader("Authorization");
+        
+        log.info("代理文件上传请求: POST {} -> {}{}", path, serviceUrl, path);
+
+        try {
+            AuthContext auth = AuthContext.from(request);
+            auth.requireRole("USER", "MERCHANT", "ADMIN");
+
+            if (request instanceof MultipartHttpServletRequest) {
+                MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+                
+                // 设置请求头
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+                if (token != null) {
+                    headers.set("Authorization", token);
+                }
+
+                // 构建multipart请求体
+                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                
+                // 处理文件
+                for (String paramName : multipartRequest.getFileMap().keySet()) {
+                    MultipartFile file = multipartRequest.getFile(paramName);
+                    if (file != null && !file.isEmpty()) {
+                        ByteArrayResource resource = new ByteArrayResource(file.getBytes()) {
+                            @Override
+                            public String getFilename() {
+                                return file.getOriginalFilename();
+                            }
+                        };
+                        body.add(paramName, resource);
+                    }
+                }
+                
+                // 处理其他参数
+                for (String paramName : multipartRequest.getParameterMap().keySet()) {
+                    String[] values = multipartRequest.getParameterValues(paramName);
+                    if (values != null) {
+                        for (String value : values) {
+                            body.add(paramName, value);
+                        }
+                    }
+                }
+
+                // 创建请求实体
+                HttpEntity<MultiValueMap<String, Object>> entity = new HttpEntity<>(body, headers);
+
+                // 发送请求
+                return restTemplate.exchange(
+                    serviceUrl + path,
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+                );
+            } else {
+                return ResponseEntity.status(400)
+                        .body("{\"code\":400,\"message\":\"不是multipart请求\",\"data\":null}");
+            }
+        } catch (Exception e) {
+            log.error("文件上传代理请求失败: {}", e.getMessage(), e);
+            return ResponseEntity.status(500)
+                    .body("{\"code\":500,\"message\":\"文件上传失败\",\"data\":null}");
+        }
+    }
+
+    /**
      * 通用代理方法
      */
     private ResponseEntity<String> proxyRequest(String serviceUrl, HttpServletRequest request, String body) {
@@ -66,13 +149,14 @@ public class GatewayController {
 
         log.info("代理请求: {} {} -> {}{}", method, path, serviceUrl, targetPath);
 
-        // 临时禁用Token验证，解决500错误
-        // if (needsAuthentication(path)) {
-        //     if (token == null || !token.startsWith("Bearer ") || !JwtUtils.validateToken(token.substring(7))) {
-        //         return ResponseEntity.status(401)
-        //                 .body("{\"code\":401,\"message\":\"未授权访问\",\"data\":null}");
-        //     }
-        // }
+        if (needsAuthentication(path, method)) {
+            try {
+                AuthContext.from(request);
+            } catch (SecurityException e) {
+                return ResponseEntity.status(401)
+                        .body("{\"code\":401,\"message\":\"未授权访问\",\"data\":null}");
+            }
+        }
 
         try {
             // 设置请求头
@@ -102,27 +186,50 @@ public class GatewayController {
     /**
      * 判断是否需要认证
      */
-    private boolean needsAuthentication(String path) {
+    private boolean needsAuthentication(String path, String method) {
+        if (RequestMethod.OPTIONS.name().equalsIgnoreCase(method)) {
+            return false;
+        }
+
+        if (RequestMethod.GET.name().equalsIgnoreCase(method)) {
+            String[] publicExactGetPaths = {
+                    "/api/products",
+                    "/api/products/categories",
+                    "/api/products/hot",
+                    "/api/health",
+                    "/api/users/health",
+                    "/api/orders/health",
+                    "/api/recommend"
+            };
+            for (String publicPath : publicExactGetPaths) {
+                if (path.equals(publicPath)) {
+                    return false;
+                }
+            }
+
+            String[] publicGetPrefixes = {
+                    "/api/products/category/",
+                    "/api/products/hot",
+                    "/api/recommend/"
+            };
+            for (String publicPath : publicGetPrefixes) {
+                if (path.startsWith(publicPath)) {
+                    return false;
+                }
+            }
+        }
+
         // 不需要认证的路径
         String[] publicPaths = {
                 "/api/users/register",
                 "/api/users/login",
-                "/api/users/health",
-                "/api/products/",
-                "/api/products",
-                "/api/admin/login",
-                "/api/admin/dashboard", 
-                "/api/admin/users",
                 "/api/merchant/login",
                 "/api/merchant/register",
-                "/api/orders/",
-                "/api/recommend/",
-                "/api/recommend",
                 "/api/health"
         };
 
         for (String publicPath : publicPaths) {
-            if (path.startsWith(publicPath)) {
+            if (path.equals(publicPath)) {
                 return false;
             }
         }

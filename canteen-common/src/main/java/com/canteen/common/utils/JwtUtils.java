@@ -47,9 +47,6 @@ public class JwtUtils {
                     .parseClaimsJws(token)
                     .getBody();
         } catch (Exception e) {
-            System.err.println("Token解析失败，Token: " + token);
-            System.err.println("错误详情: " + e.getMessage());
-            e.printStackTrace();
             throw new RuntimeException("Token解析失败: " + e.getMessage(), e);
         }
     }

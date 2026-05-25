@@ -2,6 +2,7 @@ package com.canteen.order.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.canteen.common.result.Result;
+import com.canteen.common.utils.AuthContext;
 import com.canteen.common.utils.JwtUtils;
 import com.canteen.order.dto.OrderDetailResponse;
 import com.canteen.order.entity.Order;
@@ -61,8 +62,9 @@ public class OrderController {
      * 获取订单列表 - 兼容前端调用
      */
     @GetMapping("/list")
-    public Result<List<Order>> getOrderListForUser(@RequestParam Long userId) {
+    public Result<List<Order>> getOrderListForUser(HttpServletRequest request, @RequestParam Long userId) {
         try {
+            AuthContext.from(request).requireSelfOrRole(userId, "ADMIN");
             // 为了兼容前端，直接返回列表而非分页结果
             Page<Order> orderPage = orderService.getUserOrders(userId, 1L, 100L, null);
             return Result.success(orderPage.getRecords());
@@ -96,8 +98,9 @@ public class OrderController {
      * 获取用户订单列表
      */
     @GetMapping("/user/{userId}")
-    public Result<List<Order>> getUserOrders(@PathVariable Long userId) {
+    public Result<List<Order>> getUserOrders(HttpServletRequest request, @PathVariable Long userId) {
         try {
+            AuthContext.from(request).requireSelfOrRole(userId, "ADMIN");
             Page<Order> orderPage = orderService.getUserOrders(userId, 1L, 100L, null);
             return Result.success(orderPage.getRecords());
         } catch (Exception e) {
@@ -110,8 +113,9 @@ public class OrderController {
      * 获取所有订单（管理员用）
      */
     @GetMapping
-    public Result<List<Order>> getAllOrders() {
+    public Result<List<Order>> getAllOrders(HttpServletRequest request) {
         try {
+            AuthContext.from(request).requireRole("ADMIN");
             Page<Order> orderPage = orderService.getUserOrders(null, 1L, 100L, null);
             return Result.success(orderPage.getRecords());
         } catch (Exception e) {
@@ -124,12 +128,13 @@ public class OrderController {
      * 获取订单详情
      */
     @GetMapping("/{id}")
-    public Result<OrderDetailResponse> getOrder(@PathVariable Long id) {
+    public Result<OrderDetailResponse> getOrder(HttpServletRequest request, @PathVariable Long id) {
         try {
             Order order = orderService.getOrderById(id);
             if (order == null) {
                 return Result.error("订单不存在");
             }
+            AuthContext.from(request).requireSelfOrRole(order.getUserId(), "ADMIN");
             
             List<OrderItem> items = orderService.getOrderItems(id);
             OrderDetailResponse response = new OrderDetailResponse(order, items);
@@ -144,16 +149,19 @@ public class OrderController {
      * 获取订单详情（带详情路径）
      */
     @GetMapping("/{id}/detail")
-    public Result<OrderDetailResponse> getOrderDetail(@PathVariable Long id) {
-        return getOrder(id);
+    public Result<OrderDetailResponse> getOrderDetail(HttpServletRequest request, @PathVariable Long id) {
+        return getOrder(request, id);
     }
 
     /**
      * 更新订单状态
      */
     @PutMapping("/{id}/status")
-    public Result<Boolean> updateOrderStatus(@PathVariable Long id, @RequestBody UpdateStatusRequest request) {
+    public Result<Boolean> updateOrderStatus(HttpServletRequest httpRequest,
+                                             @PathVariable Long id,
+                                             @RequestBody UpdateStatusRequest request) {
         try {
+            AuthContext.from(httpRequest).requireRole("ADMIN");
             boolean success = orderService.updateOrderStatus(id, request.getStatus());
             if (success) {
                 log.info("更新订单状态成功: {} -> {}", id, request.getStatus());
@@ -171,8 +179,9 @@ public class OrderController {
      * 支付订单
      */
     @PostMapping("/{id}/pay")
-    public Result<Boolean> payOrder(@PathVariable Long id) {
+    public Result<Boolean> payOrder(HttpServletRequest request, @PathVariable Long id) {
         try {
+            requireOrderOwnerOrAdmin(request, id);
             boolean success = orderService.payOrder(id);
             if (success) {
                 log.info("订单支付成功: {}", id);
@@ -190,8 +199,9 @@ public class OrderController {
      * 取消订单
      */
     @PostMapping("/{id}/cancel")
-    public Result<Boolean> cancelOrder(@PathVariable Long id) {
+    public Result<Boolean> cancelOrder(HttpServletRequest request, @PathVariable Long id) {
         try {
+            requireOrderOwnerOrAdmin(request, id);
             boolean success = orderService.cancelOrder(id);
             if (success) {
                 log.info("订单取消成功: {}", id);
@@ -206,11 +216,35 @@ public class OrderController {
     }
 
     /**
+     * 退款订单
+     */
+    @PostMapping("/{id}/refund")
+    public Result<Boolean> refundOrder(HttpServletRequest request,
+                                       @PathVariable Long id,
+                                       @RequestBody(required = false) RefundRequest refundRequest) {
+        try {
+            requireOrderOwnerOrAdmin(request, id);
+            String reason = refundRequest == null ? null : refundRequest.getReason();
+            boolean success = orderService.refundOrder(id, reason);
+            if (success) {
+                log.info("订单退款成功: {}", id);
+                return Result.success("退款成功", true);
+            } else {
+                return Result.error("退款失败");
+            }
+        } catch (Exception e) {
+            log.error("订单退款失败: {}", e.getMessage(), e);
+            return Result.error("退款失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 商家接单（开始制作）
      */
     @PostMapping("/{id}/prepare")
-    public Result<Boolean> prepareOrder(@PathVariable Long id) {
+    public Result<Boolean> prepareOrder(HttpServletRequest request, @PathVariable Long id) {
         try {
+            AuthContext.from(request).requireRole("MERCHANT", "ADMIN");
             boolean success = orderService.updateOrderStatus(id, Order.Status.PREPARING.getCode());
             if (success) {
                 log.info("订单开始制作: {}", id);
@@ -228,8 +262,9 @@ public class OrderController {
      * 订单制作完成（待取餐）
      */
     @PostMapping("/{id}/ready")
-    public Result<Boolean> readyOrder(@PathVariable Long id) {
+    public Result<Boolean> readyOrder(HttpServletRequest request, @PathVariable Long id) {
         try {
+            AuthContext.from(request).requireRole("MERCHANT", "ADMIN");
             boolean success = orderService.updateOrderStatus(id, Order.Status.READY.getCode());
             if (success) {
                 log.info("订单制作完成: {}", id);
@@ -247,8 +282,9 @@ public class OrderController {
      * 获取用户订单统计数据
      */
     @GetMapping("/stats/user/{userId}")
-    public Result<UserOrderStats> getUserOrderStats(@PathVariable Long userId) {
+    public Result<UserOrderStats> getUserOrderStats(HttpServletRequest request, @PathVariable Long userId) {
         try {
+            AuthContext.from(request).requireSelfOrRole(userId, "ADMIN");
             UserOrderStats stats = orderService.getUserOrderStats(userId);
             return Result.success(stats);
         } catch (Exception e) {
@@ -309,6 +345,13 @@ public class OrderController {
         public void setStatus(String status) { this.status = status; }
     }
 
+    public static class RefundRequest {
+        private String reason;
+
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
+
     // 内部类：用户订单统计数据
     public static class UserOrderStats {
         private Integer totalOrders;      // 总订单数
@@ -332,6 +375,8 @@ public class OrderController {
         public void setFavoriteCount(Integer favoriteCount) { this.favoriteCount = favoriteCount; }
     }
 
+
+
     /**
      * 从请求头中获取用户ID
      */
@@ -354,5 +399,13 @@ public class OrderController {
         }
         log.error("Token格式无效或为空");
         throw new RuntimeException("Token无效");
+    }
+
+    private void requireOrderOwnerOrAdmin(HttpServletRequest request, Long orderId) {
+        Order order = orderService.getOrderById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        AuthContext.from(request).requireSelfOrRole(order.getUserId(), "ADMIN");
     }
 }

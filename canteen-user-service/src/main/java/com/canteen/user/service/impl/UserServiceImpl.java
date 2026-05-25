@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.canteen.common.exception.BusinessException;
 import com.canteen.common.utils.JwtUtils;
 import com.canteen.user.dto.UserDTO;
-import com.canteen.user.entity.User;
-import com.canteen.user.mapper.UserMapper;
+import com.canteen.user.entity.*;
+import com.canteen.user.mapper.*;
 import com.canteen.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +17,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 用户服务实现类
@@ -28,6 +30,12 @@ import java.util.Map;
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
+    private final UserNotificationSettingsMapper notificationSettingsMapper;
+    private final UserPreferenceSettingsMapper preferenceSettingsMapper;
+    private final UserLoginRecordMapper loginRecordMapper;
+    private final SystemConfigMapper systemConfigMapper;
+    private final MerchantSettingsMapper merchantSettingsMapper;
+    
     // 暂时使用明文密码用于测试
     // private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     
@@ -280,71 +288,165 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO.LoginRecordsResponse getLoginRecords(Long userId) {
-        // 这里可以从数据库查询登录记录，暂时返回模拟数据
-        UserDTO.LoginRecordsResponse response = new UserDTO.LoginRecordsResponse();
-        java.util.List<UserDTO.LoginRecordsResponse.LoginRecord> records = new java.util.ArrayList<>();
+        QueryWrapper<UserLoginRecord> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        queryWrapper.orderByDesc("login_time");
+        queryWrapper.last("LIMIT 20"); // 限制返回最近20条记录
         
-        // 添加一些示例登录记录
-        UserDTO.LoginRecordsResponse.LoginRecord record1 = new UserDTO.LoginRecordsResponse.LoginRecord();
-        record1.setId(1L);
-        record1.setLoginTime(LocalDateTime.now().minusDays(1).toString());
-        record1.setLoginIp("192.168.1.100");
-        record1.setLoginLocation("北京市");
-        record1.setUserAgent("Chrome/120.0.0.0");
-        record1.setStatus("SUCCESS");
-        records.add(record1);
-
-        UserDTO.LoginRecordsResponse.LoginRecord record2 = new UserDTO.LoginRecordsResponse.LoginRecord();
-        record2.setId(2L);
-        record2.setLoginTime(LocalDateTime.now().toString());
-        record2.setLoginIp("192.168.1.100");
-        record2.setLoginLocation("北京市");
-        record2.setUserAgent("Chrome/120.0.0.0");
-        record2.setStatus("SUCCESS");
-        records.add(record2);
-
+        List<UserLoginRecord> loginRecords = loginRecordMapper.selectList(queryWrapper);
+        
+        UserDTO.LoginRecordsResponse response = new UserDTO.LoginRecordsResponse();
+        List<UserDTO.LoginRecordsResponse.LoginRecord> records = loginRecords.stream()
+                .map(record -> {
+                    UserDTO.LoginRecordsResponse.LoginRecord dto = new UserDTO.LoginRecordsResponse.LoginRecord();
+                    dto.setId(record.getId());
+                    dto.setLoginTime(record.getLoginTime().toString());
+                    dto.setLoginIp(record.getLoginIp());
+                    dto.setLoginLocation(record.getLoginLocation());
+                    dto.setUserAgent(record.getUserAgent());
+                    dto.setStatus(record.getStatus());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        
         response.setRecords(records);
         return response;
     }
 
     @Override
     public UserDTO.NotificationSettingsResponse getNotificationSettings(Long userId) {
-        // 这里可以从数据库查询通知设置，暂时返回默认设置
+        QueryWrapper<UserNotificationSettings> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        UserNotificationSettings settings = notificationSettingsMapper.selectOne(queryWrapper);
+        
         UserDTO.NotificationSettingsResponse response = new UserDTO.NotificationSettingsResponse();
-        response.setEmailNotification(true);
-        response.setSmsNotification(false);
-        response.setOrderNotification(true);
-        response.setPromotionNotification(true);
-        response.setSystemNotification(true);
+        if (settings != null) {
+            response.setEmailNotification(settings.getEmailNotification());
+            response.setSmsNotification(settings.getSmsNotification());
+            response.setOrderNotification(settings.getOrderNotification());
+            response.setPromotionNotification(settings.getPromotionNotification());
+            response.setSystemNotification(settings.getSystemNotification());
+        } else {
+            // 如果没有设置记录，创建默认设置
+            settings = new UserNotificationSettings();
+            settings.setUserId(userId);
+            settings.setEmailNotification(true);
+            settings.setSmsNotification(false);
+            settings.setOrderNotification(true);
+            settings.setPromotionNotification(true);
+            settings.setSystemNotification(true);
+            notificationSettingsMapper.insert(settings);
+            
+            response.setEmailNotification(true);
+            response.setSmsNotification(false);
+            response.setOrderNotification(true);
+            response.setPromotionNotification(true);
+            response.setSystemNotification(true);
+        }
         return response;
     }
 
     @Override
     @Transactional
     public boolean updateNotificationSettings(Long userId, UserDTO.UpdateNotificationSettingsRequest request) {
-        // 这里可以将设置保存到数据库，暂时只记录日志
-        log.info("更新用户{}的通知设置: {}", userId, request);
-        return true;
+        QueryWrapper<UserNotificationSettings> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        UserNotificationSettings settings = notificationSettingsMapper.selectOne(queryWrapper);
+        
+        if (settings == null) {
+            // 创建新的设置记录
+            settings = new UserNotificationSettings();
+            settings.setUserId(userId);
+            settings.setEmailNotification(request.getEmailNotification());
+            settings.setSmsNotification(request.getSmsNotification());
+            settings.setOrderNotification(request.getOrderNotification());
+            settings.setPromotionNotification(request.getPromotionNotification());
+            settings.setSystemNotification(request.getSystemNotification());
+            int result = notificationSettingsMapper.insert(settings);
+            log.info("创建用户{}的通知设置成功", userId);
+            return result > 0;
+        } else {
+            // 更新现有设置
+            settings.setEmailNotification(request.getEmailNotification());
+            settings.setSmsNotification(request.getSmsNotification());
+            settings.setOrderNotification(request.getOrderNotification());
+            settings.setPromotionNotification(request.getPromotionNotification());
+            settings.setSystemNotification(request.getSystemNotification());
+            settings.setUpdateTime(LocalDateTime.now());
+            int result = notificationSettingsMapper.updateById(settings);
+            log.info("更新用户{}的通知设置成功", userId);
+            return result > 0;
+        }
     }
 
     @Override
     public UserDTO.PreferenceSettingsResponse getPreferenceSettings(Long userId) {
-        // 这里可以从数据库查询偏好设置，暂时返回默认设置
+        QueryWrapper<UserPreferenceSettings> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        UserPreferenceSettings settings = preferenceSettingsMapper.selectOne(queryWrapper);
+        
         UserDTO.PreferenceSettingsResponse response = new UserDTO.PreferenceSettingsResponse();
-        response.setLanguage("zh-CN");
-        response.setTheme("light");
-        response.setTimezone("Asia/Shanghai");
-        response.setAutoLogin(false);
-        response.setPageSize(20);
-        response.setDefaultPayment("alipay");
+        if (settings != null) {
+            response.setLanguage(settings.getLanguage());
+            response.setTheme(settings.getTheme());
+            response.setTimezone(settings.getTimezone());
+            response.setAutoLogin(settings.getAutoLogin());
+            response.setPageSize(settings.getPageSize());
+            response.setDefaultPayment(settings.getDefaultPayment());
+        } else {
+            // 如果没有设置记录，创建默认设置
+            settings = new UserPreferenceSettings();
+            settings.setUserId(userId);
+            settings.setLanguage("zh-CN");
+            settings.setTheme("light");
+            settings.setTimezone("Asia/Shanghai");
+            settings.setAutoLogin(false);
+            settings.setPageSize(20);
+            settings.setDefaultPayment("alipay");
+            preferenceSettingsMapper.insert(settings);
+            
+            response.setLanguage("zh-CN");
+            response.setTheme("light");
+            response.setTimezone("Asia/Shanghai");
+            response.setAutoLogin(false);
+            response.setPageSize(20);
+            response.setDefaultPayment("alipay");
+        }
         return response;
     }
 
     @Override
     @Transactional
     public boolean updatePreferenceSettings(Long userId, UserDTO.UpdatePreferenceSettingsRequest request) {
-        // 这里可以将设置保存到数据库，暂时只记录日志
-        log.info("更新用户{}的偏好设置: {}", userId, request);
-        return true;
+        QueryWrapper<UserPreferenceSettings> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        UserPreferenceSettings settings = preferenceSettingsMapper.selectOne(queryWrapper);
+        
+        if (settings == null) {
+            // 创建新的设置记录
+            settings = new UserPreferenceSettings();
+            settings.setUserId(userId);
+            settings.setLanguage(request.getLanguage());
+            settings.setTheme(request.getTheme());
+            settings.setTimezone(request.getTimezone());
+            settings.setAutoLogin(request.getAutoLogin());
+            settings.setPageSize(request.getPageSize());
+            settings.setDefaultPayment(request.getDefaultPayment());
+            int result = preferenceSettingsMapper.insert(settings);
+            log.info("创建用户{}的偏好设置成功", userId);
+            return result > 0;
+        } else {
+            // 更新现有设置
+            if (request.getLanguage() != null) settings.setLanguage(request.getLanguage());
+            if (request.getTheme() != null) settings.setTheme(request.getTheme());
+            if (request.getTimezone() != null) settings.setTimezone(request.getTimezone());
+            if (request.getAutoLogin() != null) settings.setAutoLogin(request.getAutoLogin());
+            if (request.getPageSize() != null) settings.setPageSize(request.getPageSize());
+            if (request.getDefaultPayment() != null) settings.setDefaultPayment(request.getDefaultPayment());
+            settings.setUpdateTime(LocalDateTime.now());
+            int result = preferenceSettingsMapper.updateById(settings);
+            log.info("更新用户{}的偏好设置成功", userId);
+            return result > 0;
+        }
     }
 }

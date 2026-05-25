@@ -35,8 +35,9 @@
                     :show-file-list="false"
                     :on-success="handleAvatarSuccess"
                     :before-upload="beforeAvatarUpload"
+                    :headers="uploadHeaders"
                   >
-                    <img v-if="profileForm.avatar" :src="profileForm.avatar" class="avatar" />
+                    <img v-if="profileForm.avatar" :src="normalizeImageUrl(profileForm.avatar, '')" class="avatar" />
                     <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
                   </el-upload>
                 </el-form-item>
@@ -414,6 +415,8 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Setting, Plus } from '@element-plus/icons-vue'
 import settingsApi from '@/api/settings'
+import { useThemeStore } from '@/stores/theme'
+import { normalizeImageUrl } from '@/utils/image'
 
 // 获取用户角色
 const userRole = computed(() => {
@@ -421,10 +424,17 @@ const userRole = computed(() => {
   return userInfo.role || 'USER'
 })
 
+// 主题store
+const themeStore = useThemeStore()
+
 const activeTab = ref('profile')
 const profileFormRef = ref(null)
 const passwordFormRef = ref(null)
 const shopFormRef = ref(null)
+const uploadHeaders = computed(() => {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+})
 
 // 加载状态
 const savingProfile = ref(false)
@@ -471,7 +481,7 @@ const notificationSettings = reactive({
 
 // 偏好设置
 const preferenceSettings = reactive({
-  theme: 'light',
+  theme: themeStore.theme,
   language: 'zh-CN',
   autoSave: true,
   pageSize: 20
@@ -626,14 +636,15 @@ const resetProfile = () => {
 // 头像上传成功
 const handleAvatarSuccess = async (response, file) => {
   try {
-    const uploadResponse = await settingsApi.uploadAvatar(file.raw)
-    profileForm.avatar = uploadResponse.data.avatarUrl
+    const avatarUrl = response?.data?.avatarUrl
+    if (!avatarUrl) {
+      throw new Error('头像上传响应格式错误')
+    }
+    profileForm.avatar = avatarUrl
     ElMessage.success('头像上传成功')
   } catch (error) {
     console.error('头像上传失败:', error)
-    // 降级到本地URL
-    profileForm.avatar = URL.createObjectURL(file.raw)
-    ElMessage.success('头像上传成功')
+    ElMessage.error('头像上传失败')
   }
 }
 
@@ -720,8 +731,8 @@ const savePreferenceSettings = async () => {
     await settingsApi.updatePreferenceSettings(preferenceSettings)
     ElMessage.success('偏好设置保存成功')
     
-    // 应用主题设置
-    applyThemeSettings()
+    // 同步主题设置到主题store
+    themeStore.setTheme(preferenceSettings.theme)
   } catch (error) {
     console.error('保存偏好设置失败:', error)
     ElMessage.error('保存偏好设置失败')
@@ -735,23 +746,10 @@ const loadPreferenceSettings = async () => {
   try {
     const response = await settingsApi.getPreferenceSettings()
     Object.assign(preferenceSettings, response.data)
-    applyThemeSettings()
+    // 同步主题设置到主题store
+    themeStore.setTheme(preferenceSettings.theme)
   } catch (error) {
     console.error('加载偏好设置失败:', error)
-  }
-}
-
-// 应用主题设置
-const applyThemeSettings = () => {
-  const html = document.documentElement
-  if (preferenceSettings.theme === 'dark') {
-    html.classList.add('dark')
-  } else if (preferenceSettings.theme === 'light') {
-    html.classList.remove('dark')
-  } else {
-    // 跟随系统
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    html.classList.toggle('dark', isDark)
   }
 }
 
@@ -977,12 +975,91 @@ onMounted(async () => {
 }
 
 /* 深色主题支持 */
+.dark .settings-card {
+  background-color: var(--theme-bg-secondary);
+  border-color: var(--theme-border-primary);
+}
+
+.dark .settings-header {
+  color: var(--theme-text-primary);
+}
+
 .dark .stat-value {
-  color: #79bbff;
+  color: var(--theme-primary);
 }
 
 .dark .stat-label {
-  color: #ccc;
+  color: var(--theme-text-secondary);
+}
+
+.dark .setting-desc {
+  color: var(--theme-text-tertiary);
+}
+
+.dark .avatar-uploader {
+  border-color: var(--theme-border-primary);
+  background-color: var(--theme-bg-tertiary);
+}
+
+.dark .avatar-uploader:hover {
+  border-color: var(--theme-primary);
+}
+
+.dark .avatar-uploader-icon {
+  color: var(--theme-text-tertiary);
+}
+
+/* 深色模式下的表单样式 */
+.dark .el-form-item__label {
+  color: var(--theme-text-primary) !important;
+}
+
+.dark .el-form-item__content {
+  color: var(--theme-text-primary);
+}
+
+/* 深色模式下的标签页样式 */
+.dark .el-tabs--border-card {
+  background-color: var(--theme-bg-secondary);
+  border-color: var(--theme-border-primary);
+}
+
+.dark .el-tabs--border-card > .el-tabs__header {
+  background-color: var(--theme-bg-tertiary);
+  border-bottom-color: var(--theme-border-primary);
+}
+
+.dark .el-tabs--border-card > .el-tabs__header .el-tabs__item {
+  border-color: var(--theme-border-primary);
+  color: var(--theme-text-secondary);
+}
+
+.dark .el-tabs--border-card > .el-tabs__header .el-tabs__item.is-active {
+  background-color: var(--theme-bg-secondary);
+  border-bottom-color: var(--theme-bg-secondary);
+  color: var(--theme-primary);
+}
+
+.dark .el-tabs--border-card > .el-tabs__content {
+  background-color: var(--theme-bg-secondary);
+  color: var(--theme-text-primary);
+}
+
+/* 深色模式下的统计卡片样式 */
+.dark .stat-item {
+  background-color: var(--theme-bg-tertiary);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 10px;
+  border: 1px solid var(--theme-border-primary);
+  transition: all 0.3s ease;
+}
+
+.dark .stat-item:hover {
+  background-color: var(--theme-bg-secondary);
+  border-color: var(--theme-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
 }
 
 /* 响应式设计 */

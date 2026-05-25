@@ -56,6 +56,11 @@ public interface MerchantOrderService {
     void rejectOrder(Long orderId, Long merchantId, String reason);
 
     /**
+     * 商户发起退款
+     */
+    void refundOrder(Long orderId, Long merchantId, String reason);
+
+    /**
      * 更新订单状态
      */
     void updateOrderStatus(Long orderId, Long merchantId, String status);

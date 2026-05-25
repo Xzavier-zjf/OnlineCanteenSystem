@@ -138,13 +138,7 @@ const loadStatistics = async () => {
 const loadOrderStatusChart = async () => {
   try {
     const response = await adminApi.getOrderStatistics()
-    const statusData = response.data?.statusDistribution || [
-      { name: '待支付', value: 45 },
-      { name: '已支付', value: 120 },
-      { name: '制作中', value: 80 },
-      { name: '已完成', value: 200 },
-      { name: '已取消', value: 25 }
-    ]
+    const statusData = response.data?.statusDistribution || []
 
     const option = {
       tooltip: {
@@ -185,6 +179,7 @@ const loadOrderStatusChart = async () => {
     }
   } catch (error) {
     console.error('加载订单状态图表失败:', error)
+    ElMessage.error('加载订单状态图表失败')
   }
 }
 
@@ -269,14 +264,8 @@ const loadHotProducts = async () => {
     hotProducts.value = response.data || []
   } catch (error) {
     console.error('加载热门商品失败:', error)
-    // 使用默认数据作为后备
-    hotProducts.value = [
-      { rank: 1, name: '红烧肉饭', sales: 156, revenue: 2340.00 },
-      { rank: 2, name: '宫保鸡丁', sales: 134, revenue: 2010.00 },
-      { rank: 3, name: '糖醋里脊', sales: 128, revenue: 1920.00 },
-      { rank: 4, name: '麻婆豆腐', sales: 98, revenue: 1470.00 },
-      { rank: 5, name: '回锅肉', sales: 87, revenue: 1305.00 }
-    ]
+    ElMessage.error('加载热门商品失败')
+    hotProducts.value = []
   }
 }
 
@@ -286,14 +275,8 @@ const loadTopMerchants = async () => {
     topMerchants.value = response.data || []
   } catch (error) {
     console.error('加载商户排行失败:', error)
-    // 使用默认数据作为后备
-    topMerchants.value = [
-      { rank: 1, name: '第一食堂', orders: 245, revenue: 12250.00 },
-      { rank: 2, name: '第二食堂', orders: 198, revenue: 9900.00 },
-      { rank: 3, name: '清真餐厅', orders: 156, revenue: 7800.00 },
-      { rank: 4, name: '西餐厅', orders: 134, revenue: 6700.00 },
-      { rank: 5, name: '小食堂', orders: 98, revenue: 4900.00 }
-    ]
+    ElMessage.error('加载商户排行失败')
+    topMerchants.value = []
   }
 }
 

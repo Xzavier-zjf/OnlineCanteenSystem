@@ -45,7 +45,7 @@
           <div class="items-list">
             <div class="item-row" v-for="item in orderDetail.items" :key="item.id">
               <div class="item-info">
-                <img :src="item.imageUrl || '/images/placeholder.jpg'" class="item-image" alt="商品图片" />
+                <img :src="getImageUrl(item.imageUrl)" class="item-image" alt="商品图片" @error="handleImageError" />
                 <div class="item-details">
                   <h4>{{ item.productName }}</h4>
                   <p class="item-description">{{ item.description || '暂无描述' }}</p>
@@ -140,6 +140,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { orderApi } from '../api'
 import { ArrowLeft, Check, Clock, Warning, Close } from '@element-plus/icons-vue'
+import { normalizeImageUrl, setImageFallback } from '@/utils/image'
 
 export default {
   name: 'OrderDetail',
@@ -153,6 +154,10 @@ export default {
     const orderDetail = ref(null)
     const canceling = ref(false)
     const paying = ref(false)
+    const reordering = ref(false)
+
+    const getImageUrl = (imageUrl) => normalizeImageUrl(imageUrl)
+    const handleImageError = (event) => setImageFallback(event)
     
     const loadOrderDetail = async () => {
       try {
@@ -348,8 +353,39 @@ export default {
       }
     }
     
-    const reorder = () => {
-      ElMessage.info('功能开发中，敬请期待')
+    const buildReorderItems = (items = []) => items
+      .filter(item => item.productId && item.quantity && item.price)
+      .map(item => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        price: item.price
+      }))
+
+    const reorder = async () => {
+      try {
+        reordering.value = true
+        const items = buildReorderItems(orderDetail.value?.items || [])
+        if (!items.length) {
+          ElMessage.warning('该订单没有可复购的商品明细')
+          return
+        }
+
+        const response = await orderApi.createOrder({
+          items,
+          remark: `再来一单，来源订单：${orderDetail.value.orderNo || route.params.id}`
+        })
+        const newOrder = response.data || response
+        ElMessage.success('已生成新的待支付订单')
+        if (newOrder?.id) {
+          router.push(`/order/${newOrder.id}`)
+        }
+      } catch (error) {
+        console.error('再来一单失败:', error)
+        ElMessage.error('再来一单失败')
+      } finally {
+        reordering.value = false
+      }
     }
     
     onMounted(() => {
@@ -364,11 +400,14 @@ export default {
       formatTime,
       getOrderSteps,
       getStepColor,
+      getImageUrl,
+      handleImageError,
       cancelOrder,
       payOrder,
       reorder,
       canceling,
-      paying
+      paying,
+      reordering
     }
   }
 }

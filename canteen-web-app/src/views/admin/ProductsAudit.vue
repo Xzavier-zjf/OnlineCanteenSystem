@@ -67,8 +67,8 @@
         <el-table-column label="商品图片" width="100">
           <template #default="scope">
             <el-image
-              :src="scope.row.image"
-              :preview-src-list="[scope.row.image]"
+              :src="getProductImageUrl(scope.row)"
+              :preview-src-list="[getProductImageUrl(scope.row)]"
               style="width: 60px; height: 60px;"
               fit="cover"
             />
@@ -161,7 +161,7 @@
         <div style="margin-top: 20px;">
           <h4>商品图片</h4>
           <el-image
-            :src="currentProduct.image"
+            :src="getProductImageUrl(currentProduct)"
             style="width: 200px; height: 200px;"
             fit="cover"
           />
@@ -199,6 +199,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api/admin.js'
+import { normalizeImageUrl } from '@/utils/image'
 
 const loading = ref(false)
 const products = ref([])
@@ -223,6 +224,8 @@ const pagination = ref({
 const auditForm = ref({
   reason: ''
 })
+
+const getProductImageUrl = (product) => normalizeImageUrl(product?.imageUrl || product?.image)
 
 const loadProducts = async () => {
   loading.value = true

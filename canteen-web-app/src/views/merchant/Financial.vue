@@ -15,7 +15,7 @@
         <el-card class="stat-card">
           <div class="stat-content">
             <div class="stat-value">¥{{ financialStats.monthRevenue || '0.00' }}</div>
-            <div class="stat-label">本月营收</div>
+            <div class="stat-label">区间营收</div>
           </div>
           <el-icon class="stat-icon month-icon"><TrendCharts /></el-icon>
         </el-card>
@@ -143,8 +143,6 @@
               </el-form-item>
               <el-form-item label="导出格式">
                 <el-select v-model="exportForm.format" placeholder="请选择格式">
-                  <el-option label="Excel" value="excel" />
-                  <el-option label="PDF" value="pdf" />
                   <el-option label="CSV" value="csv" />
                 </el-select>
               </el-form-item>
@@ -182,7 +180,8 @@ export default {
       todayRevenue: '0.00',
       monthRevenue: '0.00',
       todayOrders: 0,
-      avgOrderValue: '0.00'
+      avgOrderValue: '0.00',
+      monthlyRevenues: []
     })
     
     const dateRange = ref([])
@@ -193,9 +192,16 @@ export default {
     const exportForm = reactive({
       type: 'monthly',
       dateRange: [],
-      format: 'excel'
+      format: 'csv'
     })
     
+    const toMoney = (value) => {
+      const amount = Number(value || 0)
+      return Number.isFinite(amount) ? amount.toFixed(2) : '0.00'
+    }
+
+    const todayText = () => new Date().toISOString().split('T')[0]
+
     // 加载财务统计数据
     const loadFinancialStats = async () => {
       try {
@@ -206,16 +212,24 @@ export default {
         })
         
         if (response.data) {
-          Object.assign(financialStats, response.data)
+          Object.assign(financialStats, {
+            todayRevenue: toMoney(response.data.todayRevenue),
+            monthRevenue: toMoney(response.data.totalRevenue),
+            avgOrderValue: toMoney(response.data.avgOrderAmount),
+            monthlyRevenues: Array.isArray(response.data.monthlyRevenues)
+              ? response.data.monthlyRevenues
+              : []
+          })
         }
       } catch (error) {
-        console.warn('财务统计API不存在，使用默认数据')
-        // 使用默认数据
+        console.error('财务统计加载失败:', error)
+        ElMessage.error('财务统计加载失败')
         Object.assign(financialStats, {
-          todayRevenue: '1,234.56',
-          monthRevenue: '45,678.90',
-          todayOrders: 28,
-          avgOrderValue: '44.09'
+          todayRevenue: '0.00',
+          monthRevenue: '0.00',
+          todayOrders: 0,
+          avgOrderValue: '0.00',
+          monthlyRevenues: []
         })
       } finally {
         loading.value = false
@@ -230,17 +244,19 @@ export default {
           endDate: dateRange.value[1]
         })
         
-        revenueDetails.value = response.data?.list || []
+        const details = response.data?.list || []
+        revenueDetails.value = details.map(item => ({
+          ...item,
+          revenue: toMoney(item.revenue),
+          avgOrderValue: toMoney(item.avgOrderValue)
+        }))
+
+        const todayDetail = details.find(item => item.date === todayText())
+        financialStats.todayOrders = Number(todayDetail?.orderCount || 0)
       } catch (error) {
-        console.warn('收入明细API不存在，使用默认数据')
-        // 确保返回数组格式
-        revenueDetails.value = [
-          { date: '2024-01-15', orderCount: 28, revenue: '1,234.56', avgOrderValue: '44.09' },
-          { date: '2024-01-14', orderCount: 32, revenue: '1,456.78', avgOrderValue: '45.52' },
-          { date: '2024-01-13', orderCount: 25, revenue: '1,098.45', avgOrderValue: '43.94' },
-          { date: '2024-01-12', orderCount: 30, revenue: '1,320.00', avgOrderValue: '44.00' },
-          { date: '2024-01-11', orderCount: 26, revenue: '1,144.00', avgOrderValue: '44.00' }
-        ]
+        console.error('收入明细加载失败:', error)
+        ElMessage.error('收入明细加载失败')
+        revenueDetails.value = []
       }
     }
     
@@ -249,17 +265,18 @@ export default {
       try {
         const response = await merchantApi.getTopProducts({ limit: 10 })
         
-        topProducts.value = response.data || []
+        const products = Array.isArray(response.data) ? response.data : []
+        topProducts.value = products.map((item, index) => ({
+          ...item,
+          rank: item.rank || index + 1,
+          productName: item.productName || item.name || '未命名商品',
+          sales: item.sales || item.salesCount || 0,
+          revenue: toMoney(item.revenue)
+        }))
       } catch (error) {
-        console.warn('热销商品API不存在，使用默认数据')
-        // 确保返回数组格式
-        topProducts.value = [
-          { rank: 1, productName: '红烧肉套餐', sales: 45, revenue: '675.00' },
-          { rank: 2, productName: '宫保鸡丁', sales: 38, revenue: '456.00' },
-          { rank: 3, productName: '麻婆豆腐', sales: 32, revenue: '384.00' },
-          { rank: 4, productName: '糖醋里脊', sales: 28, revenue: '336.00' },
-          { rank: 5, productName: '青椒肉丝', sales: 25, revenue: '300.00' }
-        ]
+        console.error('热销商品加载失败:', error)
+        ElMessage.error('热销商品加载失败')
+        topProducts.value = []
       }
     }
     
@@ -268,6 +285,11 @@ export default {
       await nextTick()
       if (revenueChart.value) {
         const chartInstance = echarts.init(revenueChart.value)
+        const chartData = Array.isArray(financialStats.monthlyRevenues)
+          ? financialStats.monthlyRevenues
+          : []
+        const xData = chartData.map(item => item.month || item.date || '')
+        const yData = chartData.map(item => Number(item.revenue || 0))
         
         const option = {
           title: {
@@ -282,7 +304,7 @@ export default {
           },
           xAxis: {
             type: 'category',
-            data: ['01-11', '01-12', '01-13', '01-14', '01-15', '01-16', '01-17']
+            data: xData
           },
           yAxis: {
             type: 'value',
@@ -291,7 +313,7 @@ export default {
             }
           },
           series: [{
-            data: [1144, 1320, 1098, 1456, 1234, 1380, 1520],
+            data: yData,
             type: 'line',
             smooth: true,
             itemStyle: {
@@ -355,8 +377,18 @@ export default {
           params.endDate = exportForm.dateRange[1]
         }
         
-        // 调用导出API
-        await merchantApi.exportFinancialReport(params)
+        const blob = await merchantApi.exportFinancialReport(params)
+        const downloadBlob = blob instanceof Blob
+          ? blob
+          : new Blob([blob], { type: 'text/csv;charset=utf-8' })
+        const url = window.URL.createObjectURL(downloadBlob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `merchant-financial-report-${new Date().toISOString().slice(0, 10)}.csv`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
         ElMessage.success('报表导出成功')
       } catch (error) {
         console.error('导出报表失败:', error)
