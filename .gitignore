@@ -46,3 +46,4 @@ Thumbs.db
 
 # Maven Shade plugin generated
 dependency-reduced-pom.xml
+/.claude
