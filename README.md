@@ -1,184 +1,158 @@
-# 高校食堂订餐系统 - 项目启动指南
+# 高校食堂订餐系统
 
-## 项目概述
-本项目是一个基于Spring Boot微服务架构的高校食堂订餐系统，包含用户管理、餐品管理、订单管理等核心功能。
+基于 Spring Boot 微服务、Vue 3 和 Java Swing 的高校食堂订餐系统。项目包含用户端、商户端、后台管理、商品管理、订单管理、推荐管理、文件上传和网关代理等功能。
 
 ## 技术栈
-- **后端**: Java 17, Spring Boot 2.7.18, Spring Cloud 2021.0.8
-- **数据库**: MySQL 8.0.33
-- **ORM**: MyBatis Plus 3.5.2
-- **认证**: JWT 0.11.5
-- **前端**: Vue 3 + Element Plus + Vite
-- **商户端**: Java Swing
+
+- 后端：Java 17、Spring Boot 2.7.18、Spring Cloud 2021.0.8
+- 数据库：MySQL 8.x
+- ORM：MyBatis Plus 3.5.2
+- 认证：JWT
+- 前端：Vue 3、Vite、Element Plus、Pinia、ECharts
+- 商户桌面端：Java Swing
 
 ## 项目结构
+
+```text
+online-canteen-system/
+├── pom.xml                         # Maven 父工程
+├── canteen-common/                 # 公共模块
+├── canteen-gateway/                # API 网关，默认端口 8080
+├── canteen-user-service/           # 用户、商户、管理员与上传服务，默认端口 8081
+├── canteen-product-service/        # 商品服务，默认端口 8082
+├── canteen-order-service/          # 订单服务，默认端口 8083
+├── canteen-recommend-service/      # 推荐服务，默认端口 8084
+├── canteen-web-app/                # Vue 前端应用
+├── canteen-merchant-client/        # Java Swing 商户客户端
+├── database/                       # 数据库初始化与增量脚本
+└── start-services.bat              # Windows 本地启动脚本
 ```
-OnlineCanteenSystem/
-├── pom.xml                    # 父项目POM
-├── canteen-common/            # 公共模块
-├── canteen-user-service/      # 用户服务 (端口:8081)
-├── canteen-product-service/   # 餐品服务 (端口:8082)
-├── canteen-order-service/     # 订单服务 (端口:8083)
-├── canteen-recommend-service/ # 推荐服务 (端口:8084)
-├── canteen-gateway/          # API网关 (端口:8080)
-├── canteen-web-app/          # 前端Vue应用
-├── canteen-merchant-client/  # 商户端Swing应用
-└── database/                 # 数据库脚本
-    ├── init.sql              # 建表脚本
-    └── test_users.sql        # 测试用户数据
+
+## 根目录 package 文件说明
+
+根目录曾经有 `package.json` 和 `package-lock.json`，它们属于旧的 mock server 配置，入口指向已经不存在的 `mock-server.js`。当前真实前端依赖在 `canteen-web-app/package.json` 中维护，因此根目录不再保留 Node 包配置。
+
+前端安装与构建请进入 `canteen-web-app/`：
+
+```bash
+cd canteen-web-app
+npm install
+npm run dev
+npm run build
 ```
 
 ## 环境要求
-1. **JDK 17** 或更高版本
-2. **Maven 3.6+**
-3. **MySQL 8.0**
-4. **Node.js 16+** (用于前端开发)
-5. **IDE**: IntelliJ IDEA 推荐
 
-## 快速启动
+- JDK 17+
+- Maven 3.6+
+- MySQL 8.x
+- Node.js 18+（推荐 20+）
 
-### 1. 数据库准备
-```sql
--- 执行数据库初始化脚本
+## 数据库初始化
+
+按实际环境创建数据库后执行脚本：
+
+```bash
 mysql -u root -p < database/init.sql
 ```
 
-### 2. 修改数据库配置
-在各服务的 `application.yml` 中修改数据库连接信息：
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/canteen_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root      # 修改为你的用户名
-    password: 123456    # 修改为你的密码
-```
+根据需要再执行增量脚本，例如：
 
-### 3. 编译项目
 ```bash
-mvn clean install
+mysql -u root -p canteen_system < database/settings_tables.sql
+mysql -u root -p canteen_system < database/add_system_settings_config.sql
+mysql -u root -p canteen_system < database/add_merchant_id_to_product.sql
 ```
 
-### 4. 启动服务
-按照以下顺序启动服务：
+服务的数据库连接配置位于各模块的 `src/main/resources/application.yml`。
 
-#### 启动用户服务
+## 后端启动
+
+先编译后端：
+
+```bash
+mvn clean compile
+```
+
+分别启动服务：
+
 ```bash
 cd canteen-user-service
 mvn spring-boot:run
-```
-或在IDE中运行 `UserServiceApplication.java`
 
-#### 启动餐品服务
-```bash
-cd canteen-product-service
+cd ../canteen-product-service
+mvn spring-boot:run
+
+cd ../canteen-order-service
+mvn spring-boot:run
+
+cd ../canteen-recommend-service
+mvn spring-boot:run
+
+cd ../canteen-gateway
 mvn spring-boot:run
 ```
-或在IDE中运行 `ProductServiceApplication.java`
 
-#### 启动订单服务
-```bash
-cd canteen-order-service
-mvn spring-boot:run
+Windows 可直接运行：
+
+```bat
+start-services.bat
 ```
-或在IDE中运行 `OrderServiceApplication.java`
 
-#### 启动推荐服务
-```bash
-cd canteen-recommend-service
-mvn spring-boot:run
-```
-或在IDE中运行 `RecommendServiceApplication.java`
+## 前端启动
 
-#### 启动API网关
-```bash
-cd canteen-gateway
-mvn spring-boot:run
-```
-或在IDE中运行 `GatewayApplication.java`
-
-### 5. 启动前端应用
 ```bash
 cd canteen-web-app
 npm install
 npm run dev
 ```
 
-### 6. 启动商户端应用
+默认访问地址：
+
+- 前端开发服务：http://localhost:3001
+- API 网关：http://localhost:8080
+
+## 商户客户端
+
 ```bash
 cd canteen-merchant-client
 mvn package
 java -jar target/canteen-merchant-client-1.0.0.jar
 ```
 
-## API 测试示例
+## 功能状态
 
-### 用户注册
-```bash
-curl -X POST http://localhost:8081/api/users/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "password": "123456",
-    "email": "test@example.com",
-    "realName": "测试用户"
-  }'
-```
+- 用户注册、登录、资料设置、偏好设置、通知设置
+- 商品浏览、分类、图片上传、图片路径统一处理
+- 下单、支付、取消订单
+- 商户接单、备餐、完成订单、财务统计
+- 管理员用户管理、商户审核、商品审核、系统设置
+- 推荐商品、热门推荐
+- 网关统一 API 转发与 `/uploads/**` 生产代理
 
-### 用户登录
-```bash
-curl -X POST http://localhost:8081/api/users/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "password": "123456"
-  }'
-```
+以下功能仍在开发或未完整接入：
 
-### 获取餐品列表
-```bash
-curl "http://localhost:8082/api/products?current=1&size=10"
-```
+- 推荐策略配置后端接口暂未接入，前端会明确提示“未接入，未保存”
+- 订单打印、退款、再来一单仍显示为功能开发中
+- 前端生产构建仍存在较大的第三方依赖 chunk，后续可继续拆包优化
+- `npm install` 后提示的依赖审计风险需单独评估和处理
 
-### 获取餐品分类
-```bash
-curl http://localhost:8082/api/products/categories
-```
+## 默认账号
 
-### 获取热门推荐
-```bash
-curl http://localhost:8082/api/products/hot
-```
+初始化脚本中通常包含以下测试账号，具体以数据库脚本为准：
 
-## 默认测试数据
-系统初始化时会创建以下测试账号：
-- **管理员**: username=`admin`, password=`admin123`
-- **商户**: username=`merchant`, password=`admin123`  
-- **用户**: username=`user1`, password=`admin123`
+- 管理员：`admin / admin123`
+- 商户：`merchant / admin123`
+- 用户：`user1 / admin123`
 
-## 开发计划
-- [x] 项目基础架构搭建
-- [x] 公共模块开发
-- [x] 用户服务开发
-- [x] 餐品服务开发
-- [x] 订单服务开发
-- [x] 推荐服务开发
-- [x] API网关开发
-- [x] Vue前端开发
-- [x] Java Swing商户端开发
-- [x] 系统集成测试
+## 仓库维护约定
 
-## 注意事项
-1. 确保MySQL服务已启动
-2. 数据库连接配置正确
-3. 确保端口8080-8084没有被占用
-4. 推荐使用Postman进行API测试
-5. 前端应用默认运行在 http://localhost:5173
+以下内容不提交到仓库：
 
-## 问题排查
-如果遇到启动问题：
-1. 检查Java版本是否为17+
-2. 检查Maven配置是否正确
-3. 检查数据库连接是否正常
-4. 查看控制台错误日志
+- Maven 构建产物：`target/`
+- 前端依赖与构建产物：`node_modules/`、`dist/`、`.vite/`
+- 运行时上传文件：`uploads/`
+- 本地环境变量：`.env*`
+- IDE、系统和工具日志：`.idea/`、`.vscode/`、`.codebuddy/`
 
-项目当前已实现完整的用户注册、登录、餐品浏览、订单管理等功能，可以作为生产环境使用的基础。
+如需提交示例上传文件，请放到专门的示例目录，并避免混入运行时上传目录。
