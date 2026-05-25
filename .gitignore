@@ -27,6 +27,7 @@ logs/
 # IDE and OS metadata
 .idea/
 .vscode/
+.codebuddy/
 *.iml
 .DS_Store
 Thumbs.db
