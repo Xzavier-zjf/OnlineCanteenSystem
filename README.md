@@ -112,6 +112,28 @@ npm run dev
 - 前端开发服务：http://localhost:3001
 - API 网关：http://localhost:8080
 
+前端接口统一走相对路径 `/api/**`，开发环境由 Vite 代理到网关，生产环境由部署层或网关承接转发。不要在业务页面中直接请求 `http://localhost:8081`、`http://localhost:8082` 等单个服务地址，否则生产部署后会访问用户本机的 `localhost`。
+
+图片与上传文件统一使用 `/uploads/**` 路径。开发环境通过 Vite 代理到用户服务，生产环境通过网关 `UploadsProxyController` 读取用户服务上传目录。
+
+## 网关配置
+
+网关默认监听 `8080`，并将请求转发到各后端服务：
+
+```yaml
+canteen:
+  user-service:
+    url: http://localhost:8081
+  product-service:
+    url: http://localhost:8082
+  order-service:
+    url: http://localhost:8083
+  recommend-service:
+    url: http://localhost:8084
+```
+
+本地默认值已内置在代码中，独立部署时可在 `canteen-gateway/src/main/resources/application-standalone.yml` 或外部配置中覆盖。网关会保留下游服务的错误码和响应体，避免把登录失败、参数错误、资源不存在等业务错误统一吞成 `500`。
+
 ## 商户客户端
 
 ```bash
@@ -154,5 +176,26 @@ java -jar target/canteen-merchant-client-1.0.0.jar
 - 运行时上传文件：`uploads/`
 - 本地环境变量：`.env*`
 - IDE、系统和工具日志：`.idea/`、`.vscode/`、`.codebuddy/`
+- 编辑器备份和临时文件：`*.backup`、`*.bak`、`*.tmp`
+- Maven Shade 生成文件：`dependency-reduced-pom.xml`
 
 如需提交示例上传文件，请放到专门的示例目录，并避免混入运行时上传目录。
+
+## Git 远端
+
+当前推荐远端命名：
+
+- `origin`：GitHub，`https://github.com/Xzavier-zjf/OnlineCanteenSystem.git`
+- `gitee`：Gitee，`git@gitee.com:fengqiqingpin/online-canteen-system.git`
+
+日常提交到 GitHub：
+
+```bash
+git push origin main
+```
+
+如需同步到 Gitee：
+
+```bash
+git push gitee main
+```
