@@ -35,6 +35,7 @@ Thumbs.db
 # Temporary/editor backup files
 *~
 *.bak
+*.backup
 *.tmp
 *.swp
 *.swo
@@ -42,3 +43,6 @@ Thumbs.db
 *.rej
 *.class
 *.jar
+
+# Maven Shade plugin generated
+dependency-reduced-pom.xml

@@ -1,6 +1,7 @@
 package com.canteen.gateway.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -19,17 +20,18 @@ import javax.servlet.http.HttpServletRequest;
 @CrossOrigin(originPatterns = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.OPTIONS})
 public class UploadsProxyController {
 
-    private static final String USER_SERVICE_URL = "http://localhost:8081";
+    @Value("${canteen.user-service.url:http://localhost:8081}")
+    private String userServiceUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     @RequestMapping(value = "/uploads/**", method = RequestMethod.GET)
     public ResponseEntity<byte[]> proxyUploads(HttpServletRequest request) {
         String path = request.getRequestURI();
-        log.info("代理上传文件读取请求: GET {} -> {}{}", path, USER_SERVICE_URL, path);
+        log.info("代理上传文件读取请求: GET {} -> {}{}", path, userServiceUrl, path);
 
         return restTemplate.exchange(
-                USER_SERVICE_URL + path,
+                userServiceUrl + path,
                 HttpMethod.GET,
                 null,
                 byte[].class

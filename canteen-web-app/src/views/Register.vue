@@ -58,6 +58,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { UserFilled } from '@element-plus/icons-vue'
+import { userApi } from '@/api/user'
 
 export default {
   name: 'Register',
@@ -107,32 +108,21 @@ export default {
       try {
         await registerFormRef.value.validate()
         loading.value = true
-        
-        // 调用真实的注册API
-        const response = await fetch('http://localhost:8081/api/users/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            username: registerForm.username,
-            email: registerForm.email,
-            password: registerForm.password
-          })
+
+        const result = await userApi.register({
+          username: registerForm.username,
+          email: registerForm.email,
+          password: registerForm.password
         })
-        
-        const result = await response.json()
-        
-        if (result.code === 200) {
-          ElMessage.success('注册成功，请登录')
-          router.push('/login')
-        } else {
-          ElMessage.error(result.message || '注册失败')
-        }
-        
+
+        ElMessage.success('注册成功，请登录')
+        router.push('/login')
+
       } catch (error) {
         console.error('注册失败:', error)
-        ElMessage.error('网络错误，请检查服务器连接')
+        if (!error.response) {
+          ElMessage.error('网络错误，请检查服务器连接')
+        }
       } finally {
         loading.value = false
       }

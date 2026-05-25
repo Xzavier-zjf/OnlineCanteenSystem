@@ -2,9 +2,11 @@ package com.canteen.gateway.controller;
 
 import com.canteen.common.utils.AuthContext;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.util.LinkedMultiValueMap;
@@ -25,12 +27,24 @@ public class GatewayController {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @Value("${canteen.user-service.url:http://localhost:8081}")
+    private String userServiceUrl;
+
+    @Value("${canteen.product-service.url:http://localhost:8082}")
+    private String productServiceUrl;
+
+    @Value("${canteen.order-service.url:http://localhost:8083}")
+    private String orderServiceUrl;
+
+    @Value("${canteen.recommend-service.url:http://localhost:8084}")
+    private String recommendServiceUrl;
+
     /**
      * 文件上传专用代理
      */
     @PostMapping("/upload/**")
     public ResponseEntity<String> proxyFileUpload(HttpServletRequest request) {
-        return proxyFileUploadRequest("http://localhost:8081", request);
+        return proxyFileUploadRequest(userServiceUrl, request);
     }
 
     /**
@@ -38,7 +52,7 @@ public class GatewayController {
      */
     @RequestMapping(value = {"/users/**", "/admin/**", "/merchant/**"}, method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
     public ResponseEntity<String> proxyUserService(HttpServletRequest request, @RequestBody(required = false) String body) {
-        return proxyRequest("http://localhost:8081", request, body);
+        return proxyRequest(userServiceUrl, request, body);
     }
 
     /**
@@ -46,7 +60,7 @@ public class GatewayController {
      */
     @RequestMapping(value = {"/products/**"}, method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
     public ResponseEntity<String> proxyProductService(HttpServletRequest request, @RequestBody(required = false) String body) {
-        return proxyRequest("http://localhost:8082", request, body);
+        return proxyRequest(productServiceUrl, request, body);
     }
 
     /**
@@ -54,7 +68,7 @@ public class GatewayController {
      */
     @RequestMapping(value = {"/orders/**"}, method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
     public ResponseEntity<String> proxyOrderService(HttpServletRequest request, @RequestBody(required = false) String body) {
-        return proxyRequest("http://localhost:8083", request, body);
+        return proxyRequest(orderServiceUrl, request, body);
     }
 
     /**
@@ -62,7 +76,7 @@ public class GatewayController {
      */
     @RequestMapping(value = "/recommend/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
     public ResponseEntity<String> proxyRecommendService(HttpServletRequest request, @RequestBody(required = false) String body) {
-        return proxyRequest("http://localhost:8084", request, body);
+        return proxyRequest(recommendServiceUrl, request, body);
     }
 
     /**
@@ -120,7 +134,7 @@ public class GatewayController {
 
                 // 发送请求
                 return restTemplate.exchange(
-                    serviceUrl + path,
+                    buildTargetUrl(serviceUrl, request),
                     HttpMethod.POST,
                     entity,
                     String.class
@@ -129,6 +143,8 @@ public class GatewayController {
                 return ResponseEntity.status(400)
                         .body("{\"code\":400,\"message\":\"不是multipart请求\",\"data\":null}");
             }
+        } catch (HttpStatusCodeException e) {
+            return downstreamError(e);
         } catch (Exception e) {
             log.error("文件上传代理请求失败: {}", e.getMessage(), e);
             return ResponseEntity.status(500)
@@ -143,11 +159,9 @@ public class GatewayController {
         String path = request.getRequestURI();
         String method = request.getMethod();
         String token = request.getHeader("Authorization");
-        
-        // 保持完整路径，因为后端服务控制器需要完整的/api路径
-        String targetPath = path;
+        String targetUrl = buildTargetUrl(serviceUrl, request);
 
-        log.info("代理请求: {} {} -> {}{}", method, path, serviceUrl, targetPath);
+        log.info("代理请求: {} {} -> {}", method, path, targetUrl);
 
         if (needsAuthentication(path, method)) {
             try {
@@ -171,11 +185,13 @@ public class GatewayController {
 
             // 发送请求
             return restTemplate.exchange(
-                serviceUrl + targetPath,
+                targetUrl,
                 HttpMethod.valueOf(method),
                 entity,
                 String.class
             );
+        } catch (HttpStatusCodeException e) {
+            return downstreamError(e);
         } catch (Exception e) {
             log.error("代理请求失败: {}", e.getMessage(), e);
             return ResponseEntity.status(500)
@@ -234,6 +250,25 @@ public class GatewayController {
             }
         }
         return true;
+    }
+
+    private String buildTargetUrl(String serviceUrl, HttpServletRequest request) {
+        StringBuilder targetUrl = new StringBuilder(serviceUrl).append(request.getRequestURI());
+        String queryString = request.getQueryString();
+        if (queryString != null && !queryString.isBlank()) {
+            targetUrl.append('?').append(queryString);
+        }
+        return targetUrl.toString();
+    }
+
+    private ResponseEntity<String> downstreamError(HttpStatusCodeException e) {
+        log.warn("下游服务返回错误: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+        HttpHeaders headers = new HttpHeaders();
+        MediaType contentType = e.getResponseHeaders() == null ? null : e.getResponseHeaders().getContentType();
+        headers.setContentType(contentType == null ? MediaType.APPLICATION_JSON : contentType);
+        return ResponseEntity.status(e.getStatusCode())
+                .headers(headers)
+                .body(e.getResponseBodyAsString());
     }
 
     /**
