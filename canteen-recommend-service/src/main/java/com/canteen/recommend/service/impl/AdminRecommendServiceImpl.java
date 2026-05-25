@@ -6,7 +6,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 管理员推荐服务实现
@@ -23,6 +25,7 @@ public class AdminRecommendServiceImpl implements AdminRecommendService {
     // 模拟推荐商品存储（实际应该存储在数据库中）
     private final Set<Long> recommendProductIds = new HashSet<>();
     private final Set<Long> hotProductIds = new HashSet<>();
+    private final Map<String, Object> recommendConfig = new ConcurrentHashMap<>(defaultRecommendConfig());
 
     @Override
     public List<Map<String, Object>> getRecommendProducts() {
@@ -98,6 +101,84 @@ public class AdminRecommendServiceImpl implements AdminRecommendService {
         } catch (Exception e) {
             log.error("获取推荐统计信息失败", e);
             return new HashMap<>();
+        }
+    }
+
+    @Override
+    public Map<String, Object> getRecommendConfig() {
+        return new HashMap<>(recommendConfig);
+    }
+
+    @Override
+    public Map<String, Object> saveRecommendConfig(Map<String, Object> config) {
+        Map<String, Object> normalizedConfig = normalizeRecommendConfig(config);
+        recommendConfig.clear();
+        recommendConfig.putAll(normalizedConfig);
+        log.info("推荐策略配置保存成功：{}", normalizedConfig);
+        return new HashMap<>(recommendConfig);
+    }
+
+    @Override
+    public List<Map<String, Object>> getTrendData(Integer days, String type) {
+        int safeDays = days == null ? 7 : Math.max(1, Math.min(days, 30));
+        List<Map<String, Object>> trend = new ArrayList<>();
+        for (int i = safeDays - 1; i >= 0; i--) {
+            LocalDate date = LocalDate.now().minusDays(i);
+            Map<String, Object> item = new HashMap<>();
+            item.put("date", date.toString());
+            if ("hot".equals(type)) {
+                item.put("views", 120 + (safeDays - i) * 8 + hotProductIds.size() * 3);
+                item.put("orders", 18 + (safeDays - i) * 2 + hotProductIds.size());
+            } else {
+                item.put("clickRate", 10.0 + (safeDays - i) * 0.8 + recommendProductIds.size() * 0.15);
+                item.put("conversionRate", 5.0 + (safeDays - i) * 0.4 + recommendProductIds.size() * 0.08);
+            }
+            trend.add(item);
+        }
+        return trend;
+    }
+
+    private static Map<String, Object> defaultRecommendConfig() {
+        Map<String, Object> config = new HashMap<>();
+        config.put("algorithm", "comprehensive");
+        config.put("salesWeight", 0.4);
+        config.put("ratingWeight", 0.3);
+        config.put("timeWeight", 0.3);
+        config.put("updateFrequency", "daily");
+        config.put("maxRecommendCount", 20);
+        return config;
+    }
+
+    private Map<String, Object> normalizeRecommendConfig(Map<String, Object> config) {
+        Map<String, Object> normalized = defaultRecommendConfig();
+        if (config == null) {
+            return normalized;
+        }
+
+        normalized.put("algorithm", String.valueOf(config.getOrDefault("algorithm", normalized.get("algorithm"))));
+        normalized.put("updateFrequency", String.valueOf(config.getOrDefault("updateFrequency", normalized.get("updateFrequency"))));
+        normalized.put("salesWeight", clampDouble(config.get("salesWeight"), 0, 1, 0.4));
+        normalized.put("ratingWeight", clampDouble(config.get("ratingWeight"), 0, 1, 0.3));
+        normalized.put("timeWeight", clampDouble(config.get("timeWeight"), 0, 1, 0.3));
+        normalized.put("maxRecommendCount", clampInt(config.get("maxRecommendCount"), 5, 50, 20));
+        return normalized;
+    }
+
+    private double clampDouble(Object value, double min, double max, double fallback) {
+        try {
+            double parsed = Double.parseDouble(String.valueOf(value));
+            return Math.max(min, Math.min(max, parsed));
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
+    private int clampInt(Object value, int min, int max, int fallback) {
+        try {
+            int parsed = Integer.parseInt(String.valueOf(value));
+            return Math.max(min, Math.min(max, parsed));
+        } catch (Exception e) {
+            return fallback;
         }
     }
 

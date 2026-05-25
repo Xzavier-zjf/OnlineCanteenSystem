@@ -32,4 +32,10 @@ public interface AdminRecommendService {
      * 获取推荐统计信息
      */
     Map<String, Object> getRecommendStatistics();
+
+    Map<String, Object> getRecommendConfig();
+
+    Map<String, Object> saveRecommendConfig(Map<String, Object> config);
+
+    List<Map<String, Object>> getTrendData(Integer days, String type);
 }

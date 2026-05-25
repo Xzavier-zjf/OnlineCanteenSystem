@@ -257,7 +257,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api/admin.js'
 import draggable from 'vuedraggable'
-import * as echarts from 'echarts'
+import { echarts } from '@/utils/echarts'
 import { normalizeImageUrl } from '@/utils/image'
 
 const recommendLoading = ref(false)

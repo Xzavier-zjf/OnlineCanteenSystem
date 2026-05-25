@@ -205,7 +205,7 @@ import {
   Plus, List, ShoppingCart, Money, Goods, Star, 
   ArrowUp, ArrowDown 
 } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/utils/echarts'
 import merchantApi from '@/api/merchant.js'
 
 export default {

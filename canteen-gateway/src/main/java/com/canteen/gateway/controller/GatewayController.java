@@ -48,6 +48,14 @@ public class GatewayController {
     }
 
     /**
+     * 推荐管理代理。必须放在通用 /admin/** 代理前，避免推荐管理请求被转到用户服务。
+     */
+    @RequestMapping(value = {"/admin/recommend/**", "/admin/recommend-config", "/admin/recommend-config/**"}, method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
+    public ResponseEntity<String> proxyAdminRecommendService(HttpServletRequest request, @RequestBody(required = false) String body) {
+        return proxyRequest(recommendServiceUrl, request, body);
+    }
+
+    /**
      * 用户服务代理 - 包括管理员API
      */
     @RequestMapping(value = {"/users/**", "/admin/**", "/merchant/**"}, method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})

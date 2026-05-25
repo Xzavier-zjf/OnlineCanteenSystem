@@ -97,7 +97,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api/admin.js'
-import * as echarts from 'echarts'
+import { echarts } from '@/utils/echarts'
 
 const statistics = ref({
   totalOrders: 0,

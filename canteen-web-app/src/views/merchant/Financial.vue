@@ -163,7 +163,7 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Money, TrendCharts, ShoppingCart, DataAnalysis } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/utils/echarts'
 import merchantApi from '@/api/merchant.js'
 
 export default {

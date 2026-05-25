@@ -160,14 +160,14 @@ export const adminApi = {
 
   getRecommendConfig() {
     return request({
-      url: '/admin/recommend-config',
+      url: '/admin/recommend/config',
       method: 'get'
     })
   },
 
   saveRecommendConfig(config) {
     return request({
-      url: '/admin/recommend-config',
+      url: '/admin/recommend/config',
       method: 'put',
       data: config
     })

@@ -91,7 +91,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { User, ShoppingCart, Shop, Money } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/utils/echarts'
 import { adminApi } from '@/api/admin'
 
 const stats = ref({})

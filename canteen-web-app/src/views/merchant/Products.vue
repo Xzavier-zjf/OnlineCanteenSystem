@@ -285,7 +285,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, RefreshRight, Search, Edit, Delete, DataAnalysis
 } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+import { echarts } from '@/utils/echarts'
 import merchantApi from '@/api/merchant.js'
 import { normalizeImageUrl, setImageFallback } from '@/utils/image'
 
