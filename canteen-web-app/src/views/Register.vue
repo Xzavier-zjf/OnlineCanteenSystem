@@ -120,7 +120,9 @@ export default {
 
       } catch (error) {
         console.error('注册失败:', error)
-        if (!error.response) {
+        if (error.isBusinessError) {
+          ElMessage.error(error.message || '注册失败')
+        } else if (!error.response) {
           ElMessage.error('网络错误，请检查服务器连接')
         }
       } finally {

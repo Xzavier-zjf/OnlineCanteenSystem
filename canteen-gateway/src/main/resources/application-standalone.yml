@@ -14,11 +14,15 @@ spring:
         enabled: false
 
 # 服务地址配置 - 直接配置后端服务地址
-services:
-  product-service: http://localhost:8082
-  user-service: http://localhost:8081
-  order-service: http://localhost:8083
-  recommend-service: http://localhost:8084
+canteen:
+  product-service:
+    url: http://localhost:8082
+  user-service:
+    url: http://localhost:8081
+  order-service:
+    url: http://localhost:8083
+  recommend-service:
+    url: http://localhost:8084
 
 logging:
   level:

@@ -88,35 +88,35 @@ export default {
     const services = ref([
       {
         name: '用户服务',
-        url: 'http://localhost:8081',
+        url: '',
         endpoint: '/api/users/health',
         status: 'unknown',
         responseTime: null
       },
       {
         name: '商品服务',
-        url: 'http://localhost:8082',
+        url: '',
         endpoint: '/api/products/categories',
         status: 'unknown',
         responseTime: null
       },
       {
         name: '订单服务',
-        url: 'http://localhost:8083',
+        url: '',
         endpoint: '/api/orders/health',
         status: 'unknown',
         responseTime: null
       },
       {
         name: '推荐服务',
-        url: 'http://localhost:8084',
+        url: '',
         endpoint: '/api/recommend/health',
         status: 'unknown',
         responseTime: null
       },
       {
         name: '网关服务',
-        url: 'http://localhost:8080',
+        url: '',
         endpoint: '/api/health',
         status: 'unknown',
         responseTime: null
@@ -215,7 +215,7 @@ export default {
         }
         
         // 测试用户服务健康状态
-        const response = await fetch('http://localhost:8081/api/users/health')
+        const response = await fetch('/api/users/health')
         if (response.ok) {
           addTestResult('用户服务连接正常', 'success')
         } else {
